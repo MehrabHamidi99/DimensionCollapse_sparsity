@@ -90,7 +90,6 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-
 def animate_histogram(activation_data, save_path='activation_animation.gif', bins=20, fps=1):
     fig, ax = plt.subplots()
 
