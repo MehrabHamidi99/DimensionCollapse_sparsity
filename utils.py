@@ -5,13 +5,10 @@ from collections import defaultdict
 
 import torch
 import torch.nn as nn
-from torch import vmap
-
 from sklearn.linear_model import LinearRegression, RANSACRegressor, BayesianRidge
 
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
