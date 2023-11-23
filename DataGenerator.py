@@ -2,7 +2,8 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
-def create_random_data(input_dimension, num=1000):
+
+def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scale=1):
     '''
     Parameters:
     input_dimension (int): The number of features for each input sample.
@@ -22,8 +23,21 @@ def create_random_data(input_dimension, num=1000):
     X, y = create_random_data(5, 1000)
 
     '''
-    # Generate random input data
-    X = np.random.rand(num, input_dimension)
+
+    def create_random_data_uniform(input_dimension, num=1000):
+        # Generate random input data
+        return np.random.rand(num, input_dimension)
+
+    def create_random_data_normal_dist(input_dimension, num=1000, loc=0, scale=1):
+        # Generate random input data
+        return np.random.normal(loc=loc, scale=scale, size=(num, input_dimension))
+    
+    
+    if normal_dsit:
+        X = create_random_data_normal_dist(input_dimension, num, loc, scale)
+    
+    else:
+        X = create_random_data_uniform(input_dimension, num)
 
     # Define a simple linear relationship (for simplicity, using a vector of ones as coefficients)
     coefficients = np.ones(input_dimension)

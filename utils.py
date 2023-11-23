@@ -87,23 +87,23 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-def animate_histogram(activation_data, save_path='activation_animation.gif', bins=20, fps=1):
+def animate_histogram(activation_data, title, save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
     fig, ax = plt.subplots()
 
     def update(epoch):
         ax.clear()
         ax.hist(activation_data[epoch], bins=bins)
-        ax.set_title(f'Epoch {epoch + 1}')
+        ax.set_title(f'{title} {epoch + 1}')
         ax.set_xlabel('Activation Value')
         ax.set_ylabel('Frequency')
 
     anim = FuncAnimation(fig, update, frames=len(activation_data), repeat=False)
 
     try:
-        anim.save(save_path, writer='imagemagick', fps=fps)
+        anim.save(pre_path + save_path, writer='imagemagick', fps=fps)
     except RuntimeError:
         print("Imagemagick writer not found. Falling back to Pillow writer.")
-        anim.save(save_path, writer=PillowWriter(fps=fps))
+        anim.save(pre_path + save_path, writer=PillowWriter(fps=fps))
 
     plt.close(fig)
     return anim
