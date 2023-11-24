@@ -103,7 +103,7 @@ def animate_histogram(activation_data, title, name_fig='', save_path='activation
         anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
     except RuntimeError:
         print("Imagemagick writer not found. Falling back to Pillow writer.")
-        anim.save(pre_path + save_path, writer=PillowWriter(fps=fps))
+        anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
     plt.show()
     plt.close(fig)
     return anim
