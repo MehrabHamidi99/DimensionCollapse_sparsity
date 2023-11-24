@@ -104,7 +104,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   plt.close(fig)
 
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
-  animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise.gif', pre_path=pre_path)
+  animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
 
   # fig, ax = plt.subplots(figsize=(10, 10))
   # tp = ax.bar(np.arange(len(net.get_layer_list())), res2)
@@ -114,7 +114,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   if return_sth:
     return res_run1, res_run2, net
   
-  return res_run1
+  return res1
 
 def before_after_training_experiment(architecture):
   '''

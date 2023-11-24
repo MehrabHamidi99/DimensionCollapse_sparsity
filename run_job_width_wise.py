@@ -61,6 +61,8 @@ if __name__ == '__main__':
     animate_histogram(result_list, 'hidden Layers',  pre_path=p_path)
 
     pool.close()
+    print("second batch")
+
 
     starttime = time.time()
     pool = multiprocessing.Pool(processes=40)
