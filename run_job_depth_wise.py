@@ -39,7 +39,7 @@ archs = [
 ]
 
 if __name__ == '__main__':
-    scale = 10
+    scale = 1
     normal_dist = True
 
     starttime = time.time()

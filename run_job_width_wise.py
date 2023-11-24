@@ -63,8 +63,6 @@ if __name__ == '__main__':
     pool.close()
     print("second batch")
 
-
-    starttime = time.time()
     pool = multiprocessing.Pool(processes=40)
     prod_x=partial(one_random_experiment, exps=50, num=10000, one=False, pre_path='results/width_analysis1/', normal_dist=normal_dist, loc=0, scale=scale)
     result_list = pool.map(prod_x, archs2)
