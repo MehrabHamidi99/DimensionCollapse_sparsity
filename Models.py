@@ -1,4 +1,4 @@
-import utils
+from utils import *
 from utils import nn
 from utils import np
 
@@ -51,12 +51,14 @@ class MLP_ReLU(nn.Module):
 
         self.apply(self.init_weights)
         self.output_dim = layer_list[-1]
+        # This should be a 0/1 array showing that for a given datapoint.
         self.neurons_activations = np.zeros(np.sum(layer_list))
+        # This is an array showing each neuron is activated for how many datapoints before reseting.
         self.additive_activations = np.zeros(np.sum(layer_list))
 
     def get_layer_list(self):
       return self.layer_list[1:]
-
+    
     def forward(self, x, return_pre_activations=False, return_activation_values=False, single_point=False):
         '''
         Performs a forward pass of the network.
@@ -69,10 +71,7 @@ class MLP_ReLU(nn.Module):
 
         Returns:
         Output of the network, and optionally, pre-activations and activations.
-
         '''
-        neurons_activated_check = []
-
         first_layer_result = self.first_layer(x)
         output = self.hidden_layers(first_layer_result)
         i = 0
@@ -105,6 +104,7 @@ class MLP_ReLU(nn.Module):
               ########## TEST the whole procedure later
           if not single_point:
                 self.additive_activations += self.neurons_activations
+                self.reset_neurons_activation()
           if return_activation_values:
             return output, pre_activations, activations
         return output
@@ -118,8 +118,24 @@ class MLP_ReLU(nn.Module):
 
       self.neurons_activations = np.zeros(np.sum(self.get_layer_list()))
       self.additive_activations = np.zeros(np.sum(self.get_layer_list()))
+    
+    def reset_neurons_activation(self):
+       self.neurons_activations = np.zeros(np.sum(self.get_layer_list()))
 
-    def analysis_neurons_activations_depth_wise(self):
+    def analysis_neurons_layer_wise_animation(self, cumulative_activations, num):
+      layer_activation_ratio = []
+      i = 0
+      layer_activation_ratio.append([cumulative_activations[self.layer_list[i]: self.layer_list[i + 1]] / num])
+      i += 1
+      for layer in self.hidden_layers:
+        layer_activation_ratio.append([cumulative_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] / num])
+        i += 1
+      # inactive_neurons = self.get_layer_list() - layer_activation_ratio
+      # self.additive_activation_ratio += layer_activation_ratio / self.get_layer_list()
+      # self.additive_in_activation_ratio += inactive_neurons / self.get_layer_list()
+      return layer_activation_ratio
+
+    def analysis_neurons_activations_depth_wise(self, num):
       '''
         Analyzes and calculates the activation ratio depth-wise in the network.
 
@@ -128,10 +144,10 @@ class MLP_ReLU(nn.Module):
       '''
       layer_activation_ratio = np.zeros(self.get_layer_list().shape[0])
       i = 0
-      layer_activation_ratio[i] = np.sum(self.neurons_activations[self.layer_list[i]: self.layer_list[i + 1]])
+      layer_activation_ratio[i] = np.sum(self.additive_activations[self.layer_list[i]: self.layer_list[i + 1]]) / num
       i += 1
       for layer in self.hidden_layers:
-        layer_activation_ratio[i] = np.sum(self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]])
+        layer_activation_ratio[i] = np.sum(self.additive_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]]) / num
         i += 1
       inactive_neurons = self.get_layer_list() - layer_activation_ratio
       self.additive_activation_ratio += layer_activation_ratio / self.get_layer_list()

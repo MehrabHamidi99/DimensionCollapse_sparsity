@@ -50,10 +50,10 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
     y += noise
 
     # Normalize the dataset
-    X_normalized = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+    # X_normalized = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
     y_normalized = (y - np.mean(y)) / np.std(y)
 
-    return X_normalized, y_normalized
+    return X, y_normalized
 
 
 def create_full_random_data(input_dimension, train_num=800, val_num=500, test_num=100):

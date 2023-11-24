@@ -27,7 +27,7 @@ def stable_neuron_analysis(model, dataset, y=None):
     for x in dataset:
         # Get pre-activation and activation values for each layer
         _ = model(torch.tensor(x, dtype=torch.float32), return_pre_activations=True)
-        model.analysis_neurons_activations_depth_wise()
+        model.analysis_neurons_activations_depth_wise(dataset.shape[0])
 
 def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1):
   '''
@@ -80,7 +80,8 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
       os.makedirs(this_path)
     except OSError as exc:
       this_path = pre_path + 'random_data_random_untrained_network{}_exps{}_num{}/'.format(str(len(architecture[1])), str(exps), str(num))
-      os.makedirs(this_path)
+      if not os.path.isdir(this_path):
+        os.makedirs(this_path)
       
   res_run1 = []
   res_run2 = []
@@ -92,17 +93,24 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
     net.reset()
 
   res1 = np.array(res_run1).mean(axis=0)
-  res2 = np.array(res_run2).mean(axis=0)
+  # res2 = np.array(res_run2).mean(axis=0)
 
   fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.hist(res1, bins=50)
+  tp = ax.hist(res1 / num, bins=20)
+  ax.set_xlabel('neuron activation percentage of a given dataset')
+  ax.set_ylabel('neuron frequency')
+  ax.set_title('#neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
   fig.savefig(this_path + 'additive_activations.pdf')
+  plt.close(fig)
 
-  fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.bar(np.arange(len(net.get_layer_list())), res2 / num)
+  layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
+  animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise.gif', pre_path=pre_path)
+
+  # fig, ax = plt.subplots(figsize=(10, 10))
+  # tp = ax.bar(np.arange(len(net.get_layer_list())), res2)
   # ax.set_xticks(np.arange(len(net.get_layer_list()) + 1))
   # ax.set_xticklabels([''] + ['layer' + str(i + 1) for i in np.arange(len(net.get_layer_list()))])
-  fig.savefig(this_path + 'additive_activation_ratio.pdf')
+  # fig.savefig(this_path + 'additive_activation_ratio.pdf')
   if return_sth:
     return res_run1, res_run2, net
   

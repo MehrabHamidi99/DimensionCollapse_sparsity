@@ -4,6 +4,7 @@ import multiprocessing
 import time
 import os
 from functools import partial
+import pickle
 
 
 archs = [
@@ -35,16 +36,25 @@ archs = [
     (100, [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]),
     (100, [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]),
     (100, [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]),
-
 ]
 
 if __name__ == '__main__':
+    scale = 10
+    normal_dist = True
+
     starttime = time.time()
     pool = multiprocessing.Pool(processes=40)
-    prod_x=partial(one_random_experiment, exps=50, num=10000, one=False, pre_path='results/depth_analysis/', normal_dist=True, loc=0, scale=1)
+    prod_x=partial(one_random_experiment, exps=50, num=10000, one=False, pre_path='results/depth_analysis/', normal_dist=normal_dist, loc=0, scale=scale)
     result_list = pool.map(prod_x, archs)
 
-    animate_histogram(result_list, 'hidden Layers',  pre_path='results/depth_analysis/')
+    p_path = 'results/depth_analysis/'
+    if normal_dist:
+        p_path +=  'normal_std{}/'.format(str(scale))
+
+    with open(p_path + 'activated_results.pkl', 'wb') as f:
+        pickle.dump(result_list, f)
+    
+    animate_histogram(result_list, 'hidden Layers',  pre_path=p_path)
 
     pool.close()
     print('That took {} seconds'.format(time.time() - starttime))
