@@ -58,6 +58,10 @@ class ParentNetwork(nn.Module, ABC):
     @abstractmethod
     def forward(self):
        pass
+    
+    def reset_all(self):
+       self.reset()
+       self.reset_neurons_activation()
        
     def reset(self, return_pre_activations=False, return_activation_values=False, single_point=False):
       '''
@@ -190,8 +194,52 @@ class ResNet_arch(nn.Module):
   def __init__(self, n_in, layer_list):
       super(ResNet_arch, self).__init__(n_in, layer_list)
 
+      # Residual connection
+      if self.input_dim != self.output_dim:
+          self.residual_layer = nn.Linear(n_in, self.output_dim)
+      else:
+          self.residual_layer = None
+
+      
+
   
-  # def forward(self, x, return_pre_activations=False, return_activation_values=False, single_point=False):
+  def forward(self, x, return_pre_activations=False, return_activation_values=False, single_point=False):
+      first_layer_result = self.first_layer(x)
+      output = self.hidden_layers(first_layer_result)
+      i = 0
+
+      if return_pre_activations:
+        new_pre_activation = self.first_layer(x)
+        # Apply ReLU activation to the first layer output
+        new_activation = nn.ReLU()(new_pre_activation)
+
+        if return_activation_values:
+          pre_activations = [new_pre_activation]
+          activations = [new_activation]
+
+        i = 0
+        self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).long().numpy()
+        i += 1
+
+        # Process hidden layers
+        for layer in self.hidden_layers:
+            new_pre_activation = layer(new_activation)
+            # Apply ReLU, except for the output layer
+            new_activation = nn.ReLU()(new_pre_activation)
+
+            if return_activation_values:
+              pre_activations.append(new_pre_activation)
+              activations.append(new_activation)
+
+            self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).long().numpy()
+            i += 1
+            ########## TEST the whole procedure later
+        if not single_point:
+              self.additive_activations += self.neurons_activations
+              self.reset_neurons_activation()
+        if return_activation_values:
+          return output, pre_activations, activations
+      return output
      
      
    

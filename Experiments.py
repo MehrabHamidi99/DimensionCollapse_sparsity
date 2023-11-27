@@ -8,6 +8,7 @@ from utils import *
 from Training import *
 
 
+##########
 def stable_neuron_analysis(model, dataset, y=None):
     '''
     Parameters
@@ -116,7 +117,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   
   return res1
 
-def before_after_training_experiment(architecture):
+def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path='', normal_dist=False, loc=0, scale=1):
   '''
     Parameters
     architecture (tuple): A tuple where the first element is the number of input features, 
@@ -153,45 +154,54 @@ def before_after_training_experiment(architecture):
     in neuron activation patterns in a neural network due to training, 
     offering valuable insights into the model's learning process.
   '''
-  
-  this_path = 'random_data_random_trained_network{}/'.format(str(architecture))
+  if normal_dist:
+    pre_path += 'normal_std{}/'.format(str(scale))
+  else:
+    pre_path += 'uniform/'
+  this_path = pre_path + 'random_data_random_trained_network{}/'.format(str(architecture))
   if not os.path.isdir(this_path):
-    os.makedirs(this_path)
+    try:
+      os.makedirs(this_path)
+    except OSError as exc:
+      this_path = pre_path + 'random_data_random_trained_network{}/'.format(str(architecture))
+      if not os.path.isdir(this_path):
+        os.makedirs(this_path)
+      
   n_in = architecture[0]
   simple_model = MLP_ReLU(n_in, layer_list=architecture[1])
-  train, val, test = create_full_random_data(n_in)
-  train_loader = get_data_loader(train[0], train[1])
+  train, val, test = create_full_random_data(n_in, output_dim=architecture[1][-1], train_num=int(num * 0.7), val_num=int(num * 0.2), test_num=num - (int(num * 0.7) + int(num * 0.3)), normal_dsit=normal_dist, loc=loc, scale=scale)
+  
+  train_loader = get_data_loader(train[0], train[1], batch_size=32)
   val_loader = get_data_loader(val[0], val[1], batch_size=1)
 
   stable_neuron_analysis(simple_model, train[0])
 
   fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.hist(simple_model.additive_activations / train[0].shape[0], bins=10)
-  fig.savefig(this_path + 'before_trainig_additive_activations.pdf')
-  plt.close()
-  plt.cla()
-  plt.clf()
+  tp = ax.hist(simple_model.additive_activations / train[0].shape[0], bins=20)
+  ax.set_xlabel('neuron activation percentage of a given dataset before training for training data')
+  ax.set_ylabel('neuron frequency')
+  ax.set_title('#neurons:{}, #layers:{}'.format(str(np.sum(simple_model.layer_list)), str(len(simple_model.layer_list))))
+  fig.savefig(this_path + 'additive_activations_before_training.pdf')
+  plt.close(fig)
 
-  fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.bar(np.arange(len(simple_model.get_layer_list())), simple_model.additive_activation_ratio / train[0].shape[0])
-  fig.savefig(this_path + 'before_trainig_additive_activations_ratio.pdf')
-  plt.close()
-  plt.cla()
-  plt.clf()
+  layer_activation_ratio = simple_model.analysis_neurons_layer_wise_animation(simple_model.additive_activations, train[0].shape[0])
+  animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_pretraining_training_data.gif', pre_path=this_path)
 
-  v, va = train_model(simple_model, train_loader, val_loader)
+  simple_model.reset_all()
+
+  va = train_model(simple_model, train_loader, val_loader, epochs=epochs)
+  animate_histogram(va, 'epoch ', save_path='epoch_visualization.gif', pre_path=this_path)
+
   stable_neuron_analysis(simple_model, train[0])
-
-
   fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.hist(simple_model.additive_activations / train[0].shape[0], bins=10)
+  tp = ax.hist(simple_model.additive_activations / train[0].shape[0], bins=20)
   fig.savefig(this_path + 'after_trainig_additive_activations.pdf')
   plt.close()
   plt.cla()
   plt.clf()
-  fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.bar(np.arange(len(simple_model.get_layer_list())), simple_model.additive_activation_ratio / train[0].shape[0])
-  fig.savefig(this_path + 'after_trainig_additive_activations_ratio.pdf')
-  plt.close()
-  plt.cla()
-  plt.clf()
+
+  layer_activation_ratio = simple_model.analysis_neurons_layer_wise_animation(simple_model.additive_activations, train[0].shape[0])
+  animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_after_training.gif', pre_path=this_path)
+
+  return simple_model.additive_activations / train[0].shape[0]
+

@@ -1,10 +1,32 @@
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
+from tqdm import tqdm
 
 from Models import *
 from utils import *
 from DataGenerator import *
+
+def stable_neuron_analysis(model, dataset, y=None):
+    '''
+    Parameters
+    model (torch.nn.Module): A trained PyTorch neural network model.
+    dataset (iterable): A dataset where each element is an input sample to the model.
+    y (iterable, optional): Output labels for the dataset, not used in the current implementation.
+    
+    Functionality
+    Iterates over each input sample in the dataset.
+    Performs a forward pass through the model to obtain pre-activation and activation values for each layer.
+    Invokes analysis_neurons_activations_depth_wise on the model to analyze neuron activations.
+    
+    Usage
+    Primarily used for understanding which neurons are consistently active or inactive across a dataset.
+    '''
+    # Process each input in the dataset
+    for x, y in dataset:
+        # Get pre-activation and activation values for each layer
+        _ = model(x, return_pre_activations=True)
+        model.analysis_neurons_activations_depth_wise(len(dataset.dataset))
 
 
 def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0.001):
@@ -47,14 +69,13 @@ def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     val_analysis = []
-    val_analysis_depth = []
 
     for epoch in range(epochs):
         model.train()
         for x_batch, y_batch in train_loader:
             optimizer.zero_grad()
             outputs = model(x_batch)
-            loss = F.mse_loss(outputs, y_batch.unsqueeze(1))
+            loss = F.mse_loss(outputs, y_batch)
             loss.backward()
             optimizer.step()
 
@@ -63,13 +84,13 @@ def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0
             with torch.no_grad():
                 val_loss = 0
                 for x_val, y_val in val_loader:
-                    val_outputs = model(torch.tensor(x_val, dtype=torch.float32), return_pre_activations=True)
-                    val_loss += F.mse_loss(val_outputs, y_val.unsqueeze(1)).item()
-                    model.analysis_neurons_activations_depth_wise()
+                    val_outputs = model(x_val, return_pre_activations=False)
+                    val_loss += F.mse_loss(val_outputs, y_val).item()
+                    # model.analysis_neurons_activations_depth_wise()
                 # print(f'Epoch {epoch+1}, Validation Loss: {val_loss / len(val_loader)}')
+        
+            stable_neuron_analysis(model, val_loader)
+            val_analysis += [model.additive_activations]
+            model.reset_all()
 
-        val_analysis += [model.additive_activations]
-        val_analysis_depth += [model.additive_activation_ratio]
-        model.reset()
-
-    return val_analysis, val_analysis_depth
+    return val_analysis

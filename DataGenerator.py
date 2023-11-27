@@ -2,6 +2,13 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
+def create_random_data_uniform(input_dimension, num=1000):
+    # Generate random input data
+    return np.random.rand(num, input_dimension)
+
+def create_random_data_normal_dist(input_dimension, num=1000, loc=0, scale=1):
+    # Generate random input data
+    return np.random.normal(loc=loc, scale=scale, size=(num, input_dimension))
 
 def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scale=1):
     '''
@@ -23,15 +30,6 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
     X, y = create_random_data(5, 1000)
 
     '''
-
-    def create_random_data_uniform(input_dimension, num=1000):
-        # Generate random input data
-        return np.random.rand(num, input_dimension)
-
-    def create_random_data_normal_dist(input_dimension, num=1000, loc=0, scale=1):
-        # Generate random input data
-        return np.random.normal(loc=loc, scale=scale, size=(num, input_dimension))
-    
     
     if normal_dsit:
         X = create_random_data_normal_dist(input_dimension, num, loc, scale)
@@ -56,7 +54,7 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
     return X, y_normalized
 
 
-def create_full_random_data(input_dimension, train_num=800, val_num=500, test_num=100):
+def create_full_random_data(input_dimension, output_dim=1, train_num=800, val_num=500, test_num=100, normal_dsit=False, loc=0, scale=1):
     '''
     Parameters:
     input_dimension (int): The number of features for each input sample.
@@ -78,22 +76,30 @@ def create_full_random_data(input_dimension, train_num=800, val_num=500, test_nu
     '''
     total_num = train_num + val_num + test_num
 
-    # Generate random input data
-    X = np.random.rand(total_num, input_dimension)
+    if normal_dsit:
+        X = create_random_data_normal_dist(input_dimension, total_num, loc, scale)
+    
+    else:
+        X = create_random_data_uniform(input_dimension, total_num)
+
+    # # Generate random input data
+    # X = np.random.rand(total_num, input_dimension)
 
     # Define a simple linear relationship
-    coefficients = np.ones(input_dimension)
+    coefficients = np.random.normal(0, 1, (input_dimension, output_dim))
 
     # Calculate output data with a linear transformation
     y = np.dot(X, coefficients)
 
     # Add Gaussian noise
-    noise = np.random.normal(0, 0.1, total_num)
+    noise = np.random.normal(0, 0.1, (total_num, output_dim))
     y += noise
 
     # Normalize the dataset
-    X_normalized = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
-    y_normalized = (y - np.mean(y)) / np.std(y)
+    # X_normalized = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+    X_normalized = X
+    # y_normalized = (y - np.mean(y)) / np.std(y)
+    y_normalized = y
 
     # Split into training, validation, and test sets
     return (X_normalized[:train_num], y_normalized[:train_num]), \
