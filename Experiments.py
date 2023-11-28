@@ -80,7 +80,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
     try:
       os.makedirs(this_path)
     except OSError as exc:
-      this_path = pre_path + 'random_data_random_untrained_network{}_exps{}_num{}/'.format(str(len(architecture[1])), str(exps), str(num))
+      this_path = pre_path + 'random_data_random_untrained_network{}_{}_exps{}_num{}/'.format(str(architecture[0]), str(len(architecture[1])), str(exps), str(num))
       if not os.path.isdir(this_path):
         os.makedirs(this_path)
       

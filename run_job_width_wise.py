@@ -33,7 +33,7 @@ def run_function(arch_set, dest='results/tests'):
     if normal_dist:
         p_path +=  'normal_std{}/'.format(str(scale))
 
-    animate_histogram(result_list, 'hidden Layers',  pre_path=p_path)
+    animate_histogram(result_list, ['size:' + str(arch_set[i][0]) for i in range(len(result_list))],  pre_path=p_path)
     pool.close()
 
 if __name__ == '__main__':

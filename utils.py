@@ -93,7 +93,10 @@ def animate_histogram(activation_data, title, name_fig='', save_path='activation
     def update(counter):
         ax.clear()
         ax.hist(activation_data[counter], bins=bins)
-        ax.set_title(f'{title} {counter + 1}')
+        if type(title) is list:
+            ax.set_title(title[counter])
+        else:
+            ax.set_title(f'{title} {counter + 1}')
         ax.set_xlabel('Activation Value')
         ax.set_ylabel('Frequency')
 

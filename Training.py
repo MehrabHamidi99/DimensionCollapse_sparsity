@@ -66,13 +66,18 @@ def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0
     This function is a comprehensive tool for training neural network models while simultaneously analyzing their behavior, 
     particularly useful for research and in-depth study of neural network dynamics.
     '''
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+    model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     val_analysis = []
 
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs)):
         model.train()
         for x_batch, y_batch in train_loader:
+            x_batch, y_batch = x_batch.to(device), y_batch.to(device)
+
             optimizer.zero_grad()
             outputs = model(x_batch)
             loss = F.mse_loss(outputs, y_batch)
