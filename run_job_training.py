@@ -39,7 +39,7 @@ if __name__ == '__main__':
     starttime = time.time()
 
     print('with analysis shallow...')
-    run_function(archs, 'results/training_analysis/')
+    run_function(archs, 'results_init/training_analysis/')
     print("Done")
 
     print('That took {} seconds'.format(time.time() - starttime))

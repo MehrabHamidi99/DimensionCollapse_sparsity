@@ -7,7 +7,7 @@ from Models import *
 from utils import *
 from DataGenerator import *
 
-def stable_neuron_analysis(model, dataset, y=None):
+def stable_neuron_analysis(model, dataset, y=None, val=False):
     '''
     Parameters
     model (torch.nn.Module): A trained PyTorch neural network model.
@@ -22,14 +22,20 @@ def stable_neuron_analysis(model, dataset, y=None):
     Usage
     Primarily used for understanding which neurons are consistently active or inactive across a dataset.
     '''
+    if val:
+        for x in dataset:
+            model(torch.tensor(x.clone().detach(), dtype=torch.float32), return_pre_activations=True)
+            model.analysis_neurons_activations_depth_wise(len(dataset))
+        return
+
     # Process each input in the dataset
     for x, y in dataset:
         # Get pre-activation and activation values for each layer
-        _ = model(x, return_pre_activations=True)
+        model(x, return_pre_activations=True)
         model.analysis_neurons_activations_depth_wise(len(dataset.dataset))
 
 
-def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0.001):
+def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0.001, validation_data=None):
     '''
     Parameters
     model (torch.nn.Module): A PyTorch neural network model to be trained.
@@ -67,7 +73,6 @@ def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0
     particularly useful for research and in-depth study of neural network dynamics.
     '''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -89,12 +94,12 @@ def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0
             with torch.no_grad():
                 val_loss = 0
                 for x_val, y_val in val_loader:
-                    val_outputs = model(x_val, return_pre_activations=False)
+                    val_outputs = model(x_val.to(device), return_pre_activations=False).detach().cpu()
                     val_loss += F.mse_loss(val_outputs, y_val).item()
                     # model.analysis_neurons_activations_depth_wise()
                 # print(f'Epoch {epoch+1}, Validation Loss: {val_loss / len(val_loader)}')
         
-            stable_neuron_analysis(model, val_loader)
+            stable_neuron_analysis(model, validation_data.to(device), val=True)
             val_analysis += [model.additive_activations]
             model.reset_all()
 

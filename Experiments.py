@@ -30,7 +30,7 @@ def stable_neuron_analysis(model, dataset, y=None):
         _ = model(torch.tensor(x, dtype=torch.float32), return_pre_activations=True)
         model.analysis_neurons_activations_depth_wise(dataset.shape[0])
 
-def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1):
+def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False):
   '''
     Parameters
     model (torch.nn.Module): A trained PyTorch neural network model.
@@ -49,8 +49,12 @@ def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1):
   # visualize_1D_boundaries(net)
   x, y = create_random_data(d, n, normal_dsit=normal_dist, loc=loc, scale=scale)
   stable_neuron_analysis(model, x)
+  eigens_res = model.eigenvalue_analysis(x, return_eigenvalues)
+  if return_eigenvalues:
+    return model.additive_activations, model.additive_activation_ratio, eigens_res[0], eigens_res[1]
+  
+  return model.additive_activations, model.additive_activation_ratio, eigens_res
 
-  return model.additive_activations, model.additive_activation_ratio
 
 
 def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, loc=0, scale=1):
@@ -71,51 +75,37 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
     Usage
     Used for conducting large-scale experiments to understand the behavior of different network architectures on random data.
   '''
-  if normal_dist:
-    pre_path += 'normal_std{}/'.format(str(scale))
-  else:
-    pre_path += 'uniform/'
-  this_path = pre_path + 'random_data_random_untrained_network{}_exps{}_num{}/'.format(str(architecture), str(exps), str(num))
-  if not os.path.isdir(this_path):
-    try:
-      os.makedirs(this_path)
-    except OSError as exc:
-      this_path = pre_path + 'random_data_random_untrained_network{}_{}_exps{}_num{}/'.format(str(architecture[0]), str(len(architecture[1])), str(exps), str(num))
-      if not os.path.isdir(this_path):
-        os.makedirs(this_path)
+
+  this_path = file_name_handling('random_data_random_untrained_network', architecture, exps, num, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
       
   res_run1 = []
   res_run2 = []
+  # eigens = []
+  eigen_count = []
   net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1])
-  for i in range(exps):
-    r1, r2 = one_random_dataset_run(net, 1000, architecture[0], normal_dist, loc, scale)
+  
+  for i in tqdm(range(exps)):
+    r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
     res_run1 += [r1]
     res_run2 += [r2]
+    # eigens += [eigens]
+    eigen_count += [count_num]
     net.reset()
-
+  
+  _, _, _, eigens = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale, return_eigenvalues=True)
   res1 = np.array(res_run1).mean(axis=0)
-  # res2 = np.array(res_run2).mean(axis=0)
+  eigen_count = np.array(eigen_count).mean(axis=0)
 
-  fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.hist(res1 / num, bins=20)
-  ax.set_xlabel('neuron activation percentage of a given dataset')
-  ax.set_ylabel('neuron frequency')
-  ax.set_title('#neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
-  fig.savefig(this_path + 'additive_activations.pdf')
-  plt.close(fig)
+  plotting_actions(res1, eigen_count, num, this_path, net)
 
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
-
-  # fig, ax = plt.subplots(figsize=(10, 10))
-  # tp = ax.bar(np.arange(len(net.get_layer_list())), res2)
-  # ax.set_xticks(np.arange(len(net.get_layer_list()) + 1))
-  # ax.set_xticklabels([''] + ['layer' + str(i + 1) for i in np.arange(len(net.get_layer_list()))])
-  # fig.savefig(this_path + 'additive_activation_ratio.pdf')
+  
+  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
+  
   if return_sth:
     return res_run1, res_run2, net
-  
-  return res1
+  return res1, eigens, eigen_count
 
 def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path='', normal_dist=False, loc=0, scale=1):
   '''
@@ -154,18 +144,9 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
     in neuron activation patterns in a neural network due to training, 
     offering valuable insights into the model's learning process.
   '''
-  if normal_dist:
-    pre_path += 'normal_std{}/'.format(str(scale))
-  else:
-    pre_path += 'uniform/'
-  this_path = pre_path + 'random_data_random_trained_network{}/'.format(str(architecture))
-  if not os.path.isdir(this_path):
-    try:
-      os.makedirs(this_path)
-    except OSError as exc:
-      this_path = pre_path + 'random_data_random_trained_network{}/'.format(str(architecture))
-      if not os.path.isdir(this_path):
-        os.makedirs(this_path)
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+  this_path = file_name_handling('random_data_random_trained_network', architecture, num, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
       
   n_in = architecture[0]
   simple_model = MLP_ReLU(n_in, layer_list=architecture[1])
@@ -175,33 +156,27 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   val_loader = get_data_loader(val[0], val[1], batch_size=1)
 
   stable_neuron_analysis(simple_model, train[0])
+  eigen_count, eigens = simple_model.eigenvalue_analysis(train[0], True)
 
-  fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.hist(simple_model.additive_activations / train[0].shape[0], bins=20)
-  ax.set_xlabel('neuron activation percentage of a given dataset before training for training data')
-  ax.set_ylabel('neuron frequency')
-  ax.set_title('#neurons:{}, #layers:{}'.format(str(np.sum(simple_model.layer_list)), str(len(simple_model.layer_list))))
-  fig.savefig(this_path + 'additive_activations_before_training.pdf')
-  plt.close(fig)
+  plotting_actions(simple_model.additive_activations, eigen_count, train[0].shape[0], this_path, simple_model, suffix='training_data_before_training_')
 
   layer_activation_ratio = simple_model.analysis_neurons_layer_wise_animation(simple_model.additive_activations, train[0].shape[0])
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_pretraining_training_data.gif', pre_path=this_path)
+  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
 
   simple_model.reset_all()
 
-  va = train_model(simple_model, train_loader, val_loader, epochs=epochs)
+  va = train_model(simple_model, train_loader, val_loader, epochs=epochs, validation_data=torch.tensor(val[0]))
+  simple_model.to('cpu')
   animate_histogram(va, 'epoch ', save_path='epoch_visualization.gif', pre_path=this_path)
-
   stable_neuron_analysis(simple_model, train[0])
-  fig, ax = plt.subplots(figsize=(10, 10))
-  tp = ax.hist(simple_model.additive_activations / train[0].shape[0], bins=20)
-  fig.savefig(this_path + 'after_trainig_additive_activations.pdf')
-  plt.close()
-  plt.cla()
-  plt.clf()
+  eigen_count, eigens = simple_model.eigenvalue_analysis(train[0], True)
+
+  plotting_actions(simple_model.additive_activations, eigen_count, train[0].shape[0], this_path, simple_model, suffix='training_data_after_training_')
 
   layer_activation_ratio = simple_model.analysis_neurons_layer_wise_animation(simple_model.additive_activations, train[0].shape[0])
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_after_training.gif', pre_path=this_path)
+  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
 
   return simple_model.additive_activations / train[0].shape[0]
 

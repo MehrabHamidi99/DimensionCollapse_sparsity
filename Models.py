@@ -109,14 +109,14 @@ class ParentNetwork(nn.Module, ABC):
 
       return layer_activation_ratio
 
-    def init_weights(self, m):
+    def init_weights(self, m, init_type='he'):
         if isinstance(m, nn.Linear):
-            # torch.nn.init.xavier_normal_(torch.tensor(m.weight, dtype=torch.double))
-            # torch.nn.init.xavier_normal_(torch.tensor(m.weight))
-            nn.init.xavier_normal_(m.weight, gain=1)
-            # m.bias.data.fill_(torch.tensor(np.random.randn() + 0.1, dtype=torch.double))
-            # m.bias.data.fill_(torch.tensor(np.random.randn() + 0.1))
-            m.bias = nn.Parameter(m.bias / 100)
+            if init_type == 'he':
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
+            elif init_type == 'xavier':
+                nn.init.xavier_normal_(m.weight, gain=1)
+            # Initialize biases to small values uniformly
+            nn.init.uniform_(m.bias, -0.01, 0.01)
 
     def get_all_parameters(self):
         weights = []
@@ -127,6 +127,10 @@ class ParentNetwork(nn.Module, ABC):
             if 'bias' in k:
                 biases.append(v)
         return weights, biases
+    
+    @abstractmethod
+    def eigenvalue_analysis(self, data):
+       pass
     
 class MLP_ReLU(ParentNetwork):
     '''
@@ -165,7 +169,7 @@ class MLP_ReLU(ParentNetwork):
             activations = [new_activation]
 
           i = 0
-          self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).long().numpy()
+          self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.cpu().clone().detach() > 0).long().numpy()
           i += 1
 
           # Process hidden layers
@@ -178,7 +182,7 @@ class MLP_ReLU(ParentNetwork):
                 pre_activations.append(new_pre_activation)
                 activations.append(new_activation)
 
-              self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).long().numpy()
+              self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.cpu().clone().detach() > 0).long().numpy()
               i += 1
               ########## TEST the whole procedure later
           if not single_point:
@@ -187,7 +191,44 @@ class MLP_ReLU(ParentNetwork):
           if return_activation_values:
             return output, pre_activations, activations
         return output
+    
+    def eigenvalue_analysis(self, data, return_eigenvalues=False):
+        eigenvalues = []
+        eigenvalues_count = []
+        i = 0
+        res_list = count_near_zero_eigenvalues(data, return_eigenvalues=return_eigenvalues)
+        if return_eigenvalues:
+          eigenvalues_count.append(res_list[0])
+          eigenvalues.append(res_list[1])
+        else:
+           eigenvalues_count.append(res_list)
 
+        new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
+        new_activation = nn.ReLU()(new_pre_activation)
+
+        res_list = count_near_zero_eigenvalues(new_activation.detach().clone().detach().numpy(), return_eigenvalues=return_eigenvalues)
+        if return_eigenvalues:
+          eigenvalues_count.append(res_list[0])
+          eigenvalues.append(res_list[1])
+        else:
+           eigenvalues_count.append(res_list)
+
+        # Process hidden layers
+        for layer in self.hidden_layers:
+            new_pre_activation = layer(new_activation)
+            new_activation = nn.ReLU()(new_pre_activation)
+
+            res_list = count_near_zero_eigenvalues(new_activation.clone().detach().numpy(), return_eigenvalues=return_eigenvalues)
+            if return_eigenvalues:
+              eigenvalues_count.append(res_list[0])
+              eigenvalues.append(res_list[1])
+            else:
+              eigenvalues_count.append(res_list)
+
+        if return_eigenvalues:
+          return eigenvalues_count, eigenvalues
+        else:
+           return eigenvalues_count
 
 class ResNet_arch(nn.Module):
    
