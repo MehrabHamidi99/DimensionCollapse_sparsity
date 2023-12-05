@@ -84,7 +84,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   eigen_count = []
   net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1])
   
-  for i in tqdm(range(exps)):
+  for i in range(exps):
     r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
     res_run1 += [r1]
     res_run2 += [r2]
@@ -103,9 +103,12 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
   
+  x, _ = create_random_data(architecture[0], num, normal_dsit=normal_dist, loc=loc, scale=scale)
+  plot_data_pca_animation(x, net, save_path='data_pca_dim.gif', pre_path=this_path)
+  
   if return_sth:
     return res_run1, res_run2, net
-  return res1, eigens, eigen_count
+  return res1 / num
 
 def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path='', normal_dist=False, loc=0, scale=1):
   '''
@@ -147,6 +150,7 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   this_path = file_name_handling('random_data_random_trained_network', architecture, num, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
+  print(this_path)
       
   n_in = architecture[0]
   simple_model = MLP_ReLU(n_in, layer_list=architecture[1])

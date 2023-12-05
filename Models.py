@@ -230,6 +230,28 @@ class MLP_ReLU(ParentNetwork):
         else:
            return eigenvalues_count
 
+
+    def plot_data_animation(self, data):
+        plot_list = []
+        i = 0
+        plot_list.append(plot_data_with_pca(data))
+
+        new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
+        new_activation = nn.ReLU()(new_pre_activation)
+
+        plot_list.append(plot_data_with_pca(new_activation.detach().clone().detach().numpy()))
+
+        # Process hidden layers
+        for layer in self.hidden_layers:
+            new_pre_activation = layer(new_activation)
+            new_activation = nn.ReLU()(new_pre_activation)
+
+            plot_list.append(plot_data_with_pca(new_activation.detach().clone().detach().numpy()))
+
+        # plot_data_pca_animation(plot_list)
+        return plot_list
+       
+
 class ResNet_arch(nn.Module):
    
   def __init__(self, n_in, layer_list):

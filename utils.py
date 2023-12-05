@@ -17,6 +17,8 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import os
 # os.chdir('/content/gdrive/MyDrive/DeepReluSymmetries/')
 import seaborn as sns
+import pandas as pd
+
 
 def visualize_1D_boundaries(model, input_range=(-3, 3)):
     '''
@@ -91,7 +93,10 @@ def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activat
     fig, ax = plt.subplots(figsize=(8, 6))
     def update(counter):
         ax.clear()
-        ax.hist(np.nan_to_num(activation_data[counter]), bins=bins)
+        if pd.isna(activation_data[counter]).any():
+            ax.hist(np.nan_to_num(activation_data[counter], nan=0), bins=bins)
+        else:
+            ax.hist(activation_data[counter], bins=bins)
         if type(title) is list:
             ax.set_title(title[counter])
         else:
@@ -128,16 +133,48 @@ def plot_data_with_pca(data, n_components=2):
     pcs = pca.fit_transform(data)
 
     # Plot the data in the first two principal components
-    plt.figure(figsize=(8, 6))
-    plt.scatter(pcs[:, 0], pcs[:, 1], alpha=0.7)
-    plt.xlabel('First Principal Component')
-    plt.ylabel('Second Principal Component')
-    plt.title('Data in First Two Principal Components')
-    plt.grid(True)
-    plt.show()
+    # plt.figure(figsize=(8, 6))
+    # plt.scatter(pcs[:, 0], pcs[:, 1], alpha=0.7)
+    # plt.xlabel('First Principal Component')
+    # plt.ylabel('Second Principal Component')
+    # plt.title('Data in First Two Principal Components')
+    # plt.grid(True)
+    # plt.show()
 
     # Print eigenvalues
-    print("Eigenvalues of the first two principal components:", pca.explained_variance_)
+    # print("Eigenvalues of the first two principal components:", pca.explained_variance_)
+
+    return pcs[:, 0], pcs[:, 1]
+
+def plot_data_pca_animation(data, model, name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+    all_pcs = model.plot_data_animation(data)
+    N_plots = len(all_pcs)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    
+    def update(counter):
+        ax.clear()
+        ax.scatter(all_pcs[counter][0], all_pcs[counter][1], alpha=0.7)
+
+        plt.xlabel('First Principal Component')
+        plt.ylabel('Second Principal Component')
+        plt.title('Data in First Two Principal Components')
+
+    anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
+
+    try:
+        anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
+    except RuntimeError:
+        print("Imagemagick writer not found. Falling back to Pillow writer.")
+        try:
+            anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
+        except Exception:
+            # anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
+            pass
+
+    plt.grid(True)
+    plt.close(fig)
+    return anim
 
 def count_near_zero_eigenvalues(data, threshold=0.001, return_eigenvalues=False):
     """
