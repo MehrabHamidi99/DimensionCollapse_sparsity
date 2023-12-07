@@ -8,11 +8,11 @@ import pickle
 import argparse
 
 
-constant = 15
-archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 93, 10)]
+constant = 10
+archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 110, 2)]
 
-constant = 100
-archs2 = [(constant, [constant for _ in range(i)]) for i in range(1, 112, 10)]
+# constant = 100
+# archs2 = [(constant, [constant for _ in range(i)]) for i in range(1, 112, 10)]
 
 pool = multiprocessing.Pool(processes=100)
 
@@ -50,8 +50,8 @@ if __name__ == '__main__':
     starttime = time.time()
     # prod1=partial(regul)
     # pool.map(regul, [(archs1, 15), (archs2, 100)])
-    regul(archs1, 15)
-    regul(archs2, 100)
+    regul(archs1, constant)
+    # regul(archs2, 100)
     pool.close()
 
     print('That took {} seconds'.format(time.time() - starttime))

@@ -2,7 +2,9 @@ from utils import *
 from abc import ABC, abstractmethod
 from utils import nn
 from utils import np
-
+from sklearn.manifold import TSNE
+from tqdm import tqdm
+import random
 
 class ParentNetwork(nn.Module, ABC):
     '''
@@ -231,26 +233,68 @@ class MLP_ReLU(ParentNetwork):
            return eigenvalues_count
 
 
-    def plot_data_animation(self, data):
-        plot_list = []
-        i = 0
-        plot_list.append(plot_data_with_pca(data))
+    def plot_data_animation(self, data, type_anal='pca'):
+        if type_anal == 'pca':
+          plot_list = []
+          i = 0
+          plot_list.append(plot_data_with_pca(data))
 
-        new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
-        new_activation = nn.ReLU()(new_pre_activation)
+          new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
+          new_activation = nn.ReLU()(new_pre_activation)
 
-        plot_list.append(plot_data_with_pca(new_activation.detach().clone().detach().numpy()))
+          plot_list.append(plot_data_with_pca(new_activation.detach().clone().detach().numpy()))
 
-        # Process hidden layers
-        for layer in self.hidden_layers:
-            new_pre_activation = layer(new_activation)
-            new_activation = nn.ReLU()(new_pre_activation)
+          # Process hidden layers
+          for layer in self.hidden_layers:
+              new_pre_activation = layer(new_activation)
+              new_activation = nn.ReLU()(new_pre_activation)
 
-            plot_list.append(plot_data_with_pca(new_activation.detach().clone().detach().numpy()))
+              plot_list.append(plot_data_with_pca(new_activation.detach().clone().detach().numpy()))
 
-        # plot_data_pca_animation(plot_list)
-        return plot_list
-       
+          # plot_data_pca_animation(plot_list)
+          return plot_list
+        elif type_anal == 'tsne':
+          plot_list = []
+          i = 0
+          tsne_ = TSNE(n_components=2, learning_rate='auto', init='random', n_jobs=-1)
+          plot_list.append(plot_data_with_pca(tsne_.fit_transform(data)))
+
+          new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
+          new_activation = nn.ReLU()(new_pre_activation)
+
+          plot_list.append(plot_data_with_pca(tsne_.fit_transform(new_activation.detach().clone().detach().numpy())))
+
+          # Process hidden layers
+          for layer in tqdm(self.hidden_layers):
+              new_pre_activation = layer(new_activation)
+              new_activation = nn.ReLU()(new_pre_activation)
+
+              plot_list.append(plot_data_with_pca(tsne_.fit_transform(new_activation.detach().clone().detach().numpy())))
+
+          # plot_data_pca_animation(plot_list)
+          return plot_list
+        else:
+          random_dims  = random.sample(set(list(range(0, data.shape[1]))), 2)
+          plot_list = []
+          
+          plot_list.append(data[:, random_dims])
+
+          new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
+          new_activation = nn.ReLU()(new_pre_activation)
+
+          plot_list.append(new_activation.detach().clone().detach().numpy()[:, random_dims])
+
+          # Process hidden layers
+          for layer in tqdm(self.hidden_layers):
+              new_pre_activation = layer(new_activation)
+              new_activation = nn.ReLU()(new_pre_activation)
+
+              plot_list.append(new_activation.detach().clone().detach().numpy()[:, random_dims])
+          # plot_data_pca_animation(plot_list)
+          return plot_list
+           
+
+           
 
 class ResNet_arch(nn.Module):
    

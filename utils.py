@@ -18,6 +18,8 @@ import os
 # os.chdir('/content/gdrive/MyDrive/DeepReluSymmetries/')
 import seaborn as sns
 import pandas as pd
+import random
+
 
 
 def visualize_1D_boundaries(model, input_range=(-3, 3)):
@@ -71,11 +73,6 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
 
     y_grad = np.gradient(y.flatten(), x, edge_order=2)
     y_grad2 = np.gradient(y_grad, x, edge_order=2)
-
-    # v_grad = np.vectorize(compute_gradient_vmap, signature='(n)->(n, 1)', excluded={0})
-    # grads = v_grad(model, x)
-    # print(grads)
-    # print(y_grad)
 
     # A high gradient indicates a likely boundary
     boundary_threshold = np.maximum(np.percentile(np.abs(y_grad2), 95), 0)  # e.g., 95th percentile
@@ -131,34 +128,60 @@ def plot_data_with_pca(data, n_components=2):
     # Perform PCA
     pca = PCA(n_components=n_components)
     pcs = pca.fit_transform(data)
-
-    # Plot the data in the first two principal components
-    # plt.figure(figsize=(8, 6))
-    # plt.scatter(pcs[:, 0], pcs[:, 1], alpha=0.7)
-    # plt.xlabel('First Principal Component')
-    # plt.ylabel('Second Principal Component')
-    # plt.title('Data in First Two Principal Components')
-    # plt.grid(True)
-    # plt.show()
-
-    # Print eigenvalues
-    # print("Eigenvalues of the first two principal components:", pca.explained_variance_)
-
     return pcs[:, 0], pcs[:, 1]
 
-def plot_data_pca_animation(data, model, name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
-    all_pcs = model.plot_data_animation(data)
+# def plot_data_with_tsne(data, model, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+#     all_pcs = model.plot_data_animation(data, type_anal='tsne')
+#     N_plots = len(all_pcs)
+#     fig, ax = plt.subplots(figsize=(8, 6))
+    
+#     def update(counter):
+#         ax.clear()
+#         ax.scatter(all_pcs[counter][0], all_pcs[counter][1])
+#         plt.xlabel('First Principal Component')
+#         plt.ylabel('Second Principal Component')
+#         plt.title('Data in First Two Principal Components')
+#         if type(title) is list:
+#             ax.set_title(title[counter])
+#         else:
+#             ax.set_title(f'{title} {counter + 1}')
+#         plt.ylim(-10, 10)
+#         plt.xlim(-10, 10)
+
+#     anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
+
+#     try:
+#         anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
+#     except RuntimeError:
+#         print("Imagemagick writer not found. Falling back to Pillow writer.")
+#         try:
+#             anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
+#         except Exception:
+#             # anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
+#             pass
+
+#     plt.grid(True)
+#     plt.close(fig)
+#     return anim
+
+def plot_data_with_random_dim(data, model, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+    # random.sample(set([1:data.shape[1]]), 2)
+    all_pcs = model.plot_data_animation(data, type_anal='random')
     N_plots = len(all_pcs)
     fig, ax = plt.subplots(figsize=(8, 6))
     
-    
     def update(counter):
         ax.clear()
-        ax.scatter(all_pcs[counter][0], all_pcs[counter][1], alpha=0.7)
-
+        ax.scatter(all_pcs[counter][0], all_pcs[counter][1])
         plt.xlabel('First Principal Component')
         plt.ylabel('Second Principal Component')
         plt.title('Data in First Two Principal Components')
+        if type(title) is list:
+            ax.set_title(title[counter])
+        else:
+            ax.set_title(f'{title} {counter + 1}')
+        plt.ylim(-10, 10)
+        plt.xlim(-10, 10)
 
     anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
 
@@ -175,6 +198,43 @@ def plot_data_pca_animation(data, model, name_fig='', save_path='activation_anim
     plt.grid(True)
     plt.close(fig)
     return anim
+
+def plot_data_pca_animation(data, model, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+    all_pcs = model.plot_data_animation(data)
+    N_plots = len(all_pcs)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    
+    def update(counter):
+        ax.clear()
+        ax.scatter(all_pcs[counter][0], all_pcs[counter][1], alpha=0.7)
+
+        plt.xlabel('First Principal Component')
+        plt.ylabel('Second Principal Component')
+        plt.title('Data in First Two Principal Components')
+        if type(title) is list:
+            ax.set_title(title[counter])
+        else:
+            ax.set_title(f'{title} {counter + 1}')
+        plt.ylim(-10, 10)
+        plt.xlim(-10, 10)
+
+    anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
+
+    try:
+        anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
+    except RuntimeError:
+        print("Imagemagick writer not found. Falling back to Pillow writer.")
+        try:
+            anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
+        except Exception:
+            # anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
+            pass
+
+    plt.grid(True)
+    plt.close(fig)
+    return anim
+
 
 def count_near_zero_eigenvalues(data, threshold=0.001, return_eigenvalues=False):
     """
@@ -215,6 +275,7 @@ def file_name_handling(which, architecture, num, exps=1, pre_path='', normal_dis
             this_path = pre_path + which + '_{}_{}_{}_exps{}_num{}/'.format(str(architecture[0]), str(architecture[1][0]), str(len(architecture[1])), str(exps), str(num))
             if not os.path.isdir(this_path):
                 os.makedirs(this_path)
+    print(this_path)
     return this_path
 
 def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):

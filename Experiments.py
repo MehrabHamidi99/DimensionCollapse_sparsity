@@ -30,7 +30,7 @@ def stable_neuron_analysis(model, dataset, y=None):
         _ = model(torch.tensor(x, dtype=torch.float32), return_pre_activations=True)
         model.analysis_neurons_activations_depth_wise(dataset.shape[0])
 
-def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False):
+def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False):
   '''
     Parameters
     model (torch.nn.Module): A trained PyTorch neural network model.
@@ -49,6 +49,8 @@ def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, retur
   # visualize_1D_boundaries(net)
   x, y = create_random_data(d, n, normal_dsit=normal_dist, loc=loc, scale=scale)
   stable_neuron_analysis(model, x)
+  if not necc:
+    return model.additive_activations, model.additive_activation_ratio
   eigens_res = model.eigenvalue_analysis(x, return_eigenvalues)
   if return_eigenvalues:
     return model.additive_activations, model.additive_activation_ratio, eigens_res[0], eigens_res[1]
@@ -85,16 +87,17 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1])
   
   for i in range(exps):
-    r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
+    # r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
+    r1, r2 = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
     res_run1 += [r1]
     res_run2 += [r2]
     # eigens += [eigens]
-    eigen_count += [count_num]
+    # eigen_count += [count_num]
     net.reset()
   
-  _, _, _, eigens = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale, return_eigenvalues=True)
+  _, _, eigen_count, eigens = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale, return_eigenvalues=True, necc=True)
   res1 = np.array(res_run1).mean(axis=0)
-  eigen_count = np.array(eigen_count).mean(axis=0)
+  # eigen_count = np.array(eigen_count).mean(axis=0)
 
   plotting_actions(res1, eigen_count, num, this_path, net)
 
@@ -105,7 +108,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   
   x, _ = create_random_data(architecture[0], num, normal_dsit=normal_dist, loc=loc, scale=scale)
   plot_data_pca_animation(x, net, save_path='data_pca_dim.gif', pre_path=this_path)
-  
+  plot_data_with_random_dim(x, net, save_path='data_pca_dim.gif', pre_path=this_path)
   if return_sth:
     return res_run1, res_run2, net
   return res1 / num
@@ -150,8 +153,7 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   this_path = file_name_handling('random_data_random_trained_network', architecture, num, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
-  print(this_path)
-      
+        
   n_in = architecture[0]
   simple_model = MLP_ReLU(n_in, layer_list=architecture[1])
   train, val, test = create_full_random_data(n_in, output_dim=architecture[1][-1], train_num=int(num * 0.7), val_num=int(num * 0.2), test_num=num - (int(num * 0.7) + int(num * 0.3)), normal_dsit=normal_dist, loc=loc, scale=scale)
