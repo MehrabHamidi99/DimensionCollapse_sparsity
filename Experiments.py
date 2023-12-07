@@ -107,8 +107,9 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
   
   x, _ = create_random_data(architecture[0], num, normal_dsit=normal_dist, loc=loc, scale=scale)
-  plot_data_pca_animation(x, net, save_path='data_pca_dim.gif', pre_path=this_path)
-  plot_data_with_random_dim(x, net, save_path='data_pca_dim.gif', pre_path=this_path)
+  plot_data_projection(x, net, type_analysis='pca', save_path='data_pca_dim.gif', pre_path=this_path)
+  plot_data_projection(x, net, type_analysis='random', save_path='random_dim.gif', pre_path=this_path)
+
   if return_sth:
     return res_run1, res_run2, net
   return res1 / num
@@ -153,7 +154,7 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   this_path = file_name_handling('random_data_random_trained_network', architecture, num, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
-        
+
   n_in = architecture[0]
   simple_model = MLP_ReLU(n_in, layer_list=architecture[1])
   train, val, test = create_full_random_data(n_in, output_dim=architecture[1][-1], train_num=int(num * 0.7), val_num=int(num * 0.2), test_num=num - (int(num * 0.7) + int(num * 0.3)), normal_dsit=normal_dist, loc=loc, scale=scale)

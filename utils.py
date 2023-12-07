@@ -116,91 +116,14 @@ def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activat
     return anim
 
 
-def plot_data_with_pca(data, n_components=2):
-    """
-    Plots data in the first two principal component dimensions after performing PCA.
-
-    Parameters:
-    data (numpy.ndarray): A 2D numpy array where rows represent samples and columns represent features.
-
-    """
-
+def get_pc_components(data, n_components=2):
     # Perform PCA
     pca = PCA(n_components=n_components)
     pcs = pca.fit_transform(data)
     return pcs[:, 0], pcs[:, 1]
 
-# def plot_data_with_tsne(data, model, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
-#     all_pcs = model.plot_data_animation(data, type_anal='tsne')
-#     N_plots = len(all_pcs)
-#     fig, ax = plt.subplots(figsize=(8, 6))
-    
-#     def update(counter):
-#         ax.clear()
-#         ax.scatter(all_pcs[counter][0], all_pcs[counter][1])
-#         plt.xlabel('First Principal Component')
-#         plt.ylabel('Second Principal Component')
-#         plt.title('Data in First Two Principal Components')
-#         if type(title) is list:
-#             ax.set_title(title[counter])
-#         else:
-#             ax.set_title(f'{title} {counter + 1}')
-#         plt.ylim(-10, 10)
-#         plt.xlim(-10, 10)
-
-#     anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
-
-#     try:
-#         anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
-#     except RuntimeError:
-#         print("Imagemagick writer not found. Falling back to Pillow writer.")
-#         try:
-#             anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
-#         except Exception:
-#             # anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
-#             pass
-
-#     plt.grid(True)
-#     plt.close(fig)
-#     return anim
-
-def plot_data_with_random_dim(data, model, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
-    # random.sample(set([1:data.shape[1]]), 2)
-    all_pcs = model.plot_data_animation(data, type_anal='random')
-    N_plots = len(all_pcs)
-    fig, ax = plt.subplots(figsize=(8, 6))
-    
-    def update(counter):
-        ax.clear()
-        ax.scatter(all_pcs[counter][0], all_pcs[counter][1])
-        plt.xlabel('First Principal Component')
-        plt.ylabel('Second Principal Component')
-        plt.title('Data in First Two Principal Components')
-        if type(title) is list:
-            ax.set_title(title[counter])
-        else:
-            ax.set_title(f'{title} {counter + 1}')
-        plt.ylim(-10, 10)
-        plt.xlim(-10, 10)
-
-    anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
-
-    try:
-        anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
-    except RuntimeError:
-        print("Imagemagick writer not found. Falling back to Pillow writer.")
-        try:
-            anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
-        except Exception:
-            # anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
-            pass
-
-    plt.grid(True)
-    plt.close(fig)
-    return anim
-
-def plot_data_pca_animation(data, model, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
-    all_pcs = model.plot_data_animation(data)
+def plot_data_projection(data, model, type_analysis='pca', title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+    all_pcs = model.plot_data_animation(data, type_anal=type_analysis)
     N_plots = len(all_pcs)
     fig, ax = plt.subplots(figsize=(8, 6))
     
@@ -209,9 +132,14 @@ def plot_data_pca_animation(data, model, title='layers: ', name_fig='', save_pat
         ax.clear()
         ax.scatter(all_pcs[counter][0], all_pcs[counter][1], alpha=0.7)
 
-        plt.xlabel('First Principal Component')
-        plt.ylabel('Second Principal Component')
-        plt.title('Data in First Two Principal Components')
+        if type_analysis == 'pca':
+            plt.xlabel('First Principal Component')
+            plt.ylabel('Second Principal Component')
+            plt.title('Data in First Two Principal Components')
+        elif type_analysis == 'random':
+            plt.xlabel('First Random Diemnsion')
+            plt.ylabel('Second Random Dimension')
+            plt.title('Data in Two Random Dimension')
         if type(title) is list:
             ax.set_title(title[counter])
         else:
