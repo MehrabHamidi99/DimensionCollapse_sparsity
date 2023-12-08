@@ -2,6 +2,40 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
+
+
+def gaussian_hypersphere(D, N=1000, r=1, surface=True):
+    """
+    Generates points uniformly distributed inside (or on the surface of) a D-dimensional hypersphere.
+
+    Parameters:
+    N (int): Number of points to generate.
+    D (int): Dimension of the hypersphere.
+    r (float, optional): Radius of the hypersphere. Default is 1.
+    surface (bool, optional): If True, points will be on the surface of the hypersphere. Default is False.
+
+    Returns:
+    numpy.ndarray: An array of shape (N, D) representing the points.
+    """
+
+    # Set seed for reproducibility
+    np.random.seed(1)
+
+    # Sample D vectors of N Gaussian coordinates
+    samples = np.random.randn(N, D)
+
+    # Normalize all distances (radii) to 1
+    radii = np.linalg.norm(samples, axis=1)
+    samples = samples / radii[:, np.newaxis]
+
+    # Sample N radii with exponential distribution (unless points are to be on the surface)
+    if not surface:
+        new_radii = np.random.uniform(size=N) ** (1 / D)
+        samples = samples * new_radii[:, np.newaxis]
+
+    return samples * r
+
+
 def create_random_data_uniform(input_dimension, num=1000):
     # Generate random input data
     return np.random.rand(num, input_dimension)
@@ -10,7 +44,7 @@ def create_random_data_normal_dist(input_dimension, num=1000, loc=0, scale=1):
     # Generate random input data
     return np.random.normal(loc=loc, scale=scale, size=(num, input_dimension))
 
-def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scale=1):
+def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scale=1, exp_type='normal', constant=5):
     '''
     Parameters:
     input_dimension (int): The number of features for each input sample.
@@ -30,19 +64,22 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
     X, y = create_random_data(5, 1000)
 
     '''
-    
-    if normal_dsit:
-        X = create_random_data_normal_dist(input_dimension, num, loc, scale)
-    
-    else:
-        X = create_random_data_uniform(input_dimension, num)
+    if exp_type == 'normal':
+        if normal_dsit:
+            X = create_random_data_normal_dist(input_dimension, num, loc, scale)
+        
+        else:
+            X = create_random_data_uniform(input_dimension, num)
+
+    elif exp_type == 'fixed':
+        X = gaussian_hypersphere(input_dimension, num, r=constant)
+
 
     # Define a simple linear relationship (for simplicity, using a vector of ones as coefficients)
-    coefficients = np.ones(input_dimension)
+    coefficients = np.random.rand(1, input_dimension).flatten()
 
     # Calculate output data with a linear transformation
     y = np.dot(X, coefficients)
-
     # Add some noise to y
     noise = np.random.normal(0, 0.1, num)  # Gaussian noise with mean 0 and standard deviation 0.1
     y += noise

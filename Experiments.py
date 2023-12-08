@@ -30,7 +30,7 @@ def stable_neuron_analysis(model, dataset, y=None):
         _ = model(torch.tensor(x, dtype=torch.float32), return_pre_activations=True)
         model.analysis_neurons_activations_depth_wise(dataset.shape[0])
 
-def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False, this_path='', exp_type='normal'):
+def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False, this_path='', exp_type='normal', constant=5):
   '''
     Parameters
     model (torch.nn.Module): A trained PyTorch neural network model.
@@ -47,7 +47,7 @@ def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, retur
 
   '''
   # visualize_1D_boundaries(net)
-  x, y = create_random_data(d, n, normal_dsit=normal_dist, loc=loc, scale=scale, exp_type=exp_type)
+  x, y = create_random_data(input_dimension=d, num=n, normal_dsit=normal_dist, loc=loc, scale=scale, exp_type=exp_type, constant=constant)
   stable_neuron_analysis(model, x)
   if not necc:
     return model.additive_activations, model.additive_activation_ratio
@@ -57,7 +57,7 @@ def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, retur
     return model.additive_activations, model.additive_activation_ratio, res[0], res[1], res[2], res[3], res[4], res[5], res[6]
   return model.additive_activations, model.additive_activation_ratio, res, res[1], res[2], res[3], res[4], res[5]
 
-def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, loc=0, scale=1, exp_type='normal'):
+def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, loc=0, scale=1, exp_type='normal', constant=5):
   '''
     Parameters
     architecture (tuple): A tuple where the first element is the number of input features, and the second element is a list of layer sizes for the network.
@@ -76,7 +76,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
     Used for conducting large-scale experiments to understand the behavior of different network architectures on random data.
   '''
 
-  this_path = file_name_handling('random_data_random_untrained_network', architecture, exps, num, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
+  this_path = file_name_handling('random_data_random_untrained_network', architecture, num=num, exps=exps, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
       
   res_run1 = []
   res_run2 = []
@@ -86,16 +86,19 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   
   for i in range(exps):
     # r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
-    r1, r2 = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale, exp_type)
+    r1, r2 = one_random_dataset_run(model=net, n=num, d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, exp_type=exp_type, constant=constant)
     res_run1 += [r1]
     res_run2 += [r2]
     # eigens += [eigens]
     # eigen_count += [count_num]
     net.reset()
   
-  _, _, eigen_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances = one_random_dataset_run(
-                                    architecture[0], normal_dist, loc, scale, 
-                                    return_eigenvalues=True, necc=True, this_path=this_path, exp_type=exp_type)
+  _, _, eigen_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, \
+  distances = one_random_dataset_run(model=net, n=num,
+                                    d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
+                                    return_eigenvalues=True, necc=True, 
+                                    this_path=this_path, exp_type=exp_type, constant=constant)
+  
   res1 = np.array(res_run1).mean(axis=0)
   # eigen_count = np.array(eigen_count).mean(axis=0)
 
@@ -106,6 +109,7 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
   projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
   animate_histogram(distances, 'layers: ', x_axis_title='pairwise distances distribution', save_path='distance_distribution.gif', pre_path=this_path, fixed_scale=True)
+  plot_distances(net=net, distances=distances, this_path=this_path)
 
   if return_sth:
     return res_run1, res_run2, net
@@ -183,4 +187,3 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
 
   return simple_model.additive_activations / train[0].shape[0]
-

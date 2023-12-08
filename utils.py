@@ -127,14 +127,13 @@ def get_pc_components(data, n_components=2):
 def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
     N_plots = len(anim_pieces)
     if dim == 3:
-        fig = plt.figure(figsize=(8, 6))
-        ax = fig.add_subplot(projection='3d')
+        fig, ax = plt.subplots(1, 1, subplot_kw={'projection':'3d', 'aspect':'equal'}, figsize=(8,6))
     elif dim == 2:
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(10, 10))
     
     def update(counter):
         ax.clear()
-        ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1])
+        ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], s=10)
 
         if type_analysis == 'pca':
             plt.xlabel('First Principal Component')
@@ -178,6 +177,10 @@ def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers:
     return anim
         
 def projection_analysis(data, type_anal, dim):
+    if data.shape[1] == 2:
+        return data[:, 0], data[:, 1], np.zeros(data.shape[0])
+    if data.shape[1] < 2:
+        return data[:, 0], data[:, 0]
     if dim == 2:
         if type_anal == 'pca':
             return get_pc_components(data)
@@ -251,6 +254,19 @@ def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):
     ax.set_title('Non-zero eigenvalues for network with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
     fig.savefig(this_path + suffix + 'non_zero_eigenvalues.pdf')
     plt.close(fig)
+
+def plot_distances(net, distances, this_path, suffix=''):
+    fig, ax = plt.subplots(figsize=(10, 10))
+    X_axis = np.arange(len(distances))
+    plt.bar(X_axis - 0.2, np.array(distances).mean(axis=1), 0.4, label = 'Mean')
+    plt.bar(X_axis + 0.2, np.array(distances).max(axis=1), 0.4, label = 'Max')
+    ax.set_ylabel('mean pairwise distances')
+    ax.set_xlabel('layers')
+    ax.set_title('mean pairwise distances per layer with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
+    fig.savefig(this_path + suffix + 'mean_distances.pdf')
+    plt.legend() 
+    plt.close(fig)
+
 
 def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path):
     plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path)
