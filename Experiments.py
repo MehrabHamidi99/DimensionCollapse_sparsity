@@ -30,7 +30,7 @@ def stable_neuron_analysis(model, dataset, y=None):
         _ = model(torch.tensor(x, dtype=torch.float32), return_pre_activations=True)
         model.analysis_neurons_activations_depth_wise(dataset.shape[0])
 
-def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False):
+def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False, this_path='', exp_type='normal'):
   '''
     Parameters
     model (torch.nn.Module): A trained PyTorch neural network model.
@@ -47,19 +47,17 @@ def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, retur
 
   '''
   # visualize_1D_boundaries(net)
-  x, y = create_random_data(d, n, normal_dsit=normal_dist, loc=loc, scale=scale)
+  x, y = create_random_data(d, n, normal_dsit=normal_dist, loc=loc, scale=scale, exp_type=exp_type)
   stable_neuron_analysis(model, x)
   if not necc:
     return model.additive_activations, model.additive_activation_ratio
-  eigens_res = model.eigenvalue_analysis(x, return_eigenvalues)
+  res = model.other_forward_analysis(x, return_eigenvalues)
+
   if return_eigenvalues:
-    return model.additive_activations, model.additive_activation_ratio, eigens_res[0], eigens_res[1]
-  
-  return model.additive_activations, model.additive_activation_ratio, eigens_res
+    return model.additive_activations, model.additive_activation_ratio, res[0], res[1], res[2], res[3], res[4], res[5], res[6]
+  return model.additive_activations, model.additive_activation_ratio, res, res[1], res[2], res[3], res[4], res[5]
 
-
-
-def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, loc=0, scale=1):
+def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, loc=0, scale=1, exp_type='normal'):
   '''
     Parameters
     architecture (tuple): A tuple where the first element is the number of input features, and the second element is a list of layer sizes for the network.
@@ -88,14 +86,16 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   
   for i in range(exps):
     # r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
-    r1, r2 = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
+    r1, r2 = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale, exp_type)
     res_run1 += [r1]
     res_run2 += [r2]
     # eigens += [eigens]
     # eigen_count += [count_num]
     net.reset()
   
-  _, _, eigen_count, eigens = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale, return_eigenvalues=True, necc=True)
+  _, _, eigen_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances = one_random_dataset_run(
+                                    architecture[0], normal_dist, loc, scale, 
+                                    return_eigenvalues=True, necc=True, this_path=this_path, exp_type=exp_type)
   res1 = np.array(res_run1).mean(axis=0)
   # eigen_count = np.array(eigen_count).mean(axis=0)
 
@@ -103,12 +103,9 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
 
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
-  
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
-  
-  x, _ = create_random_data(architecture[0], num, normal_dsit=normal_dist, loc=loc, scale=scale)
-  plot_data_projection(x, net, type_analysis='pca', save_path='data_pca_dim.gif', pre_path=this_path)
-  plot_data_projection(x, net, type_analysis='random', save_path='random_dim.gif', pre_path=this_path)
+  projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
+  animate_histogram(distances, 'layers: ', x_axis_title='pairwise distances distribution', save_path='distance_distribution.gif', pre_path=this_path, fixed_scale=True)
 
   if return_sth:
     return res_run1, res_run2, net
@@ -163,7 +160,7 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   val_loader = get_data_loader(val[0], val[1], batch_size=1)
 
   stable_neuron_analysis(simple_model, train[0])
-  eigen_count, eigens = simple_model.eigenvalue_analysis(train[0], True)
+  eigen_count, eigens = simple_model.other_forward_analysis(train[0], True)
 
   plotting_actions(simple_model.additive_activations, eigen_count, train[0].shape[0], this_path, simple_model, suffix='training_data_before_training_')
 
@@ -177,7 +174,7 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   simple_model.to('cpu')
   animate_histogram(va, 'epoch ', save_path='epoch_visualization.gif', pre_path=this_path)
   stable_neuron_analysis(simple_model, train[0])
-  eigen_count, eigens = simple_model.eigenvalue_analysis(train[0], True)
+  eigen_count, eigens = simple_model.other_forward_analysis(train[0], True)
 
   plotting_actions(simple_model.additive_activations, eigen_count, train[0].shape[0], this_path, simple_model, suffix='training_data_after_training_')
 

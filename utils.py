@@ -21,7 +21,6 @@ import pandas as pd
 import random
 
 
-
 def visualize_1D_boundaries(model, input_range=(-3, 3)):
     '''
     Parameters:
@@ -86,7 +85,7 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', fixed_scale=False, custom_range=20):
     fig, ax = plt.subplots(figsize=(8, 6))
     def update(counter):
         ax.clear()
@@ -98,6 +97,8 @@ def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activat
             ax.set_title(title[counter])
         else:
             ax.set_title(f'{title} {counter + 1}')
+        if fixed_scale:
+            ax.set_xlim(0, custom_range)
         ax.set_xlabel(x_axis_title)
         ax.set_ylabel('Frequency')
 
@@ -115,40 +116,53 @@ def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activat
     plt.close(fig)
     return anim
 
-
 def get_pc_components(data, n_components=2):
     # Perform PCA
     pca = PCA(n_components=n_components)
     pcs = pca.fit_transform(data)
+    if n_components == 3:
+        return pcs[:, 0], pcs[:, 1], pcs[:, 2]
     return pcs[:, 0], pcs[:, 1]
 
-def plot_data_projection(data, model, type_analysis='pca', title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
-    all_pcs = model.plot_data_animation(data, type_anal=type_analysis)
-    N_plots = len(all_pcs)
-    fig, ax = plt.subplots(figsize=(8, 6))
-    
+def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+    N_plots = len(anim_pieces)
+    if dim == 3:
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(projection='3d')
+    elif dim == 2:
+        fig, ax = plt.subplots(figsize=(8, 6))
     
     def update(counter):
         ax.clear()
-        ax.scatter(all_pcs[counter][0], all_pcs[counter][1], alpha=0.7)
+        ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1])
 
         if type_analysis == 'pca':
             plt.xlabel('First Principal Component')
             plt.ylabel('Second Principal Component')
-            plt.title('Data in First Two Principal Components')
+            if dim == 2:
+                plt.title('Data in First Two Principal Components')
+            if dim == 3:
+                ax.set_zlabel('Third Principal Component')
+                plt.title('Data in First Three Principal Components')
         elif type_analysis == 'random':
             plt.xlabel('First Random Diemnsion')
             plt.ylabel('Second Random Dimension')
             plt.title('Data in Two Random Dimension')
+            if dim == 2:
+                plt.title('Data in Two Random Dimension')
+            if dim == 3:
+                ax.set_zlabel('Third Random Dimension')
+                plt.title('Data in Three Random Dimension')
         if type(title) is list:
             ax.set_title(title[counter])
         else:
             ax.set_title(f'{title} {counter + 1}')
         plt.ylim(-10, 10)
         plt.xlim(-10, 10)
+        if dim == 3:
+            ax.set_zlim(-10, 10)            
 
     anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
-
     try:
         anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
     except RuntimeError:
@@ -162,9 +176,23 @@ def plot_data_projection(data, model, type_analysis='pca', title='layers: ', nam
     plt.grid(True)
     plt.close(fig)
     return anim
+        
+def projection_analysis(data, type_anal, dim):
+    if dim == 2:
+        if type_anal == 'pca':
+            return get_pc_components(data)
+        elif type_anal == 'random':
+            random_dims  = random.sample(set(list(range(0, data.shape[1]))), dim)
+            return data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]]
+    elif dim == 3:
+        if type_anal == 'pca':
+            return get_pc_components(data, n_components=3)
+        elif type_anal == 'random':
+            random_dims  = random.sample(set(list(range(0, data.shape[1]))), dim)
+            return data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]], data[0:data.shape[0], random_dims[2]]
+    raise Exception("type or dim set wrong!")
 
-
-def count_near_zero_eigenvalues(data, threshold=0.001, return_eigenvalues=False):
+def count_near_zero_eigenvalues(data, threshold=0.0001, return_eigenvalues=False):
     """
     Counts the number of eigenvalues of the covariance matrix of the data that are close to zero.
 
@@ -188,7 +216,6 @@ def count_near_zero_eigenvalues(data, threshold=0.001, return_eigenvalues=False)
     if return_eigenvalues:
         return near_zero_count, eigenvalues
     return near_zero_count
-
 
 def file_name_handling(which, architecture, num, exps=1, pre_path='', normal_dist=False, loc=0, scale=1):
     if normal_dist:
@@ -225,18 +252,8 @@ def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):
     fig.savefig(this_path + suffix + 'non_zero_eigenvalues.pdf')
     plt.close(fig)
 
-
-
-
-# if normal_dist:
-#     pre_path += 'normal_std{}/'.format(str(scale))
-#   else:
-#     pre_path += 'uniform/'
-#   this_path = pre_path + 'random_data_random_untrained_network{}_exps{}_num{}/'.format(str(architecture), str(exps), str(num))
-#   if not os.path.isdir(this_path):
-#     try:
-#       os.makedirs(this_path)
-#     except OSError as exc:
-#       this_path = pre_path + 'random_data_random_untrained_network{}_{}_{}_exps{}_num{}/'.format(str(architecture[0]), str(architecture[1][0]), str(len(architecture[1])), str(exps), str(num))
-#       if not os.path.isdir(this_path):
-#         os.makedirs(this_path)
+def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path):
+    plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path)
+    plot_data_projection(list_pca_3d, type_analysis='pca', dim=3, save_path='data_pca_3d.gif', pre_path=pre_path)
+    plot_data_projection(list_random_2d, type_analysis='random', dim=2, save_path='data_random_2d.gif', pre_path=pre_path)
+    plot_data_projection(list_random_3d, type_analysis='pca', dim=3, save_path='data_random_3d.gif', pre_path=pre_path)

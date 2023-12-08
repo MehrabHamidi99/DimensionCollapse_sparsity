@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from utils import nn
 from utils import np
 from sklearn.manifold import TSNE
-from tqdm import tqdm
 import random
+from scipy.spatial.distance import pdist, squareform
 
 class ParentNetwork(nn.Module, ABC):
     '''
@@ -118,7 +118,7 @@ class ParentNetwork(nn.Module, ABC):
             elif init_type == 'xavier':
                 nn.init.xavier_normal_(m.weight, gain=1)
             # Initialize biases to small values uniformly
-            nn.init.uniform_(m.bias, -0.01, 0.01)
+            nn.init.uniform_(m.bias, -0.001, 0.001)
 
     def get_all_parameters(self):
         weights = []
@@ -131,7 +131,7 @@ class ParentNetwork(nn.Module, ABC):
         return weights, biases
     
     @abstractmethod
-    def eigenvalue_analysis(self, data):
+    def other_forward_analysis(self, data):
        pass
     
 class MLP_ReLU(ParentNetwork):
@@ -193,104 +193,50 @@ class MLP_ReLU(ParentNetwork):
           if return_activation_values:
             return output, pre_activations, activations
         return output
-    
-    def eigenvalue_analysis(self, data, return_eigenvalues=False):
+        
+    def other_forward_analysis(self, data, return_eigenvalues=False, plot_projection=True, calculate_distance=True):
         eigenvalues = []
         eigenvalues_count = []
-        i = 0
-        res_list = count_near_zero_eigenvalues(data, return_eigenvalues=return_eigenvalues)
-        if return_eigenvalues:
-          eigenvalues_count.append(res_list[0])
-          eigenvalues.append(res_list[1])
-        else:
-           eigenvalues_count.append(res_list)
+        plot_list_pca_2d = []
+        plot_list_pca_3d = []
+        plot_list_random_2d = []
+        plot_list_random_3d = []
+        dis_values = []
 
-        
+        def append_handling(this_data):
+          dis_values.append(list(pdist(this_data)))
+
+          res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=return_eigenvalues)
+          if return_eigenvalues:
+            eigenvalues_count.append(res_list[0])
+            eigenvalues.append(res_list[1])
+          else:
+            eigenvalues_count.append(res_list)
+          if plot_projection:
+            plot_list_pca_2d.append(projection_analysis(this_data, 'pca', 2))
+            plot_list_pca_3d.append(projection_analysis(this_data, 'pca', 3))
+            plot_list_random_2d.append(projection_analysis(this_data, 'random', 2))
+            plot_list_random_3d.append(projection_analysis(this_data, 'random', 3))
+
+        append_handling(data)
 
         new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
         new_activation = nn.ReLU()(new_pre_activation)
-
-        res_list = count_near_zero_eigenvalues(new_activation.detach().clone().detach().numpy(), return_eigenvalues=return_eigenvalues)
-        if return_eigenvalues:
-          eigenvalues_count.append(res_list[0])
-          eigenvalues.append(res_list[1])
-        else:
-           eigenvalues_count.append(res_list)
+        new_data = new_activation.detach().clone().detach().numpy()
+        append_handling(new_data)
 
         # Process hidden layers
         for layer in self.hidden_layers:
             new_pre_activation = layer(new_activation)
             new_activation = nn.ReLU()(new_pre_activation)
+            new_data = new_activation.detach().clone().detach().numpy()
 
-            res_list = count_near_zero_eigenvalues(new_activation.clone().detach().numpy(), return_eigenvalues=return_eigenvalues)
-            if return_eigenvalues:
-              eigenvalues_count.append(res_list[0])
-              eigenvalues.append(res_list[1])
-            else:
-              eigenvalues_count.append(res_list)
+            append_handling(new_data)
 
         if return_eigenvalues:
-          return eigenvalues_count, eigenvalues
+          return eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, dis_values
         else:
-           return eigenvalues_count
-
-
-    def plot_data_animation(self, data, type_anal='pca'):
-        if type_anal == 'pca':
-          plot_list = []
-          i = 0
-          plot_list.append(get_pc_components(data))
-
-          new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
-          new_activation = nn.ReLU()(new_pre_activation)
-
-          plot_list.append(get_pc_components(new_activation.detach().clone().detach().numpy()))
-
-          # Process hidden layers
-          for layer in self.hidden_layers:
-              new_pre_activation = layer(new_activation)
-              new_activation = nn.ReLU()(new_pre_activation)
-
-              plot_list.append(get_pc_components(new_activation.detach().clone().detach().numpy()))
-          return plot_list
-        elif type_anal == 'tsne':
-          plot_list = []
-          i = 0
-          tsne_ = TSNE(n_components=2, learning_rate='auto', init='random', n_jobs=-1)
-          plot_list.append(get_pc_components(tsne_.fit_transform(data)))
-
-          new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
-          new_activation = nn.ReLU()(new_pre_activation)
-
-          plot_list.append(get_pc_components(tsne_.fit_transform(new_activation.detach().clone().detach().numpy())))
-
-          # Process hidden layers
-          for layer in tqdm(self.hidden_layers):
-              new_pre_activation = layer(new_activation)
-              new_activation = nn.ReLU()(new_pre_activation)
-
-              plot_list.append(get_pc_components(tsne_.fit_transform(new_activation.detach().clone().detach().numpy())))
-          return plot_list
-        else:
-          random_dims  = random.sample(set(list(range(0, data.shape[1]))), 2)
-          plot_list = []
-          
-          plot_list.append(data[:, random_dims])
-
-          new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
-          new_activation = nn.ReLU()(new_pre_activation)
-
-          plot_list.append(new_activation.detach().clone().detach().numpy()[:, random_dims])
-
-          # Process hidden layers
-          for layer in tqdm(self.hidden_layers):
-              new_pre_activation = layer(new_activation)
-              new_activation = nn.ReLU()(new_pre_activation)
-
-              plot_list.append(new_activation.detach().clone().detach().numpy()[:, random_dims])
-          
-          return plot_list
-        
+           return eigenvalues_count, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, dis_values
 
 class ResNet_arch(nn.Module):
    
