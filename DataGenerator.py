@@ -67,12 +67,13 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
     if exp_type == 'normal':
         if normal_dsit:
             X = create_random_data_normal_dist(input_dimension, num, loc, scale)
-        
         else:
             X = create_random_data_uniform(input_dimension, num)
 
     elif exp_type == 'fixed':
         X = gaussian_hypersphere(input_dimension, num, r=constant)
+    else:
+        raise Exception("Unknonw type data")
 
 
     # Define a simple linear relationship (for simplicity, using a vector of ones as coefficients)

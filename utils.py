@@ -85,20 +85,28 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', fixed_scale=False, custom_range=20):
-    fig, ax = plt.subplots(figsize=(8, 6))
+def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False):
+    fig, ax = plt.subplots(figsize=(10, 10))
     def update(counter):
         ax.clear()
         if pd.isna(activation_data[counter]).any():
-            ax.hist(np.nan_to_num(activation_data[counter], nan=0), bins=bins)
+            if step:
+                ax.hist(np.nan_to_num(activation_data[counter], nan=0).flatten(), bins=bins, histtype='step')
+            else:
+                ax.hist(np.nan_to_num(activation_data[counter], nan=0).flatten(), bins=bins)
         else:
-            ax.hist(activation_data[counter], bins=bins)
+            if step:
+                ax.hist(activation_data[counter].flatten(), bins=bins, histtype='step')
+            else:
+                ax.hist(np.nan_to_num(activation_data[counter], nan=0).flatten(), bins=bins)
+
         if type(title) is list:
             ax.set_title(title[counter])
         else:
             ax.set_title(f'{title} {counter + 1}')
         if fixed_scale:
-            ax.set_xlim(0, custom_range)
+            ax.set_xlim(0, custom_range + 0.1)
+            plt.xticks(np.arange(0, custom_range + 0.1, step=0.2))
         ax.set_xlabel(x_axis_title)
         ax.set_ylabel('Frequency')
 
@@ -258,13 +266,16 @@ def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):
 def plot_distances(net, distances, this_path, suffix=''):
     fig, ax = plt.subplots(figsize=(10, 10))
     X_axis = np.arange(len(distances))
-    plt.bar(X_axis - 0.2, np.array(distances).mean(axis=1), 0.4, label = 'Mean')
-    plt.bar(X_axis + 0.2, np.array(distances).max(axis=1), 0.4, label = 'Max')
+    dis_stat = np.array(distances)
+    print(dis_stat.shape)
+    plt.bar(X_axis - 0.2, dis_stat[:, 0], 0.2, label = 'Mean')
+    plt.bar(X_axis + 0.0, dis_stat[:, 1], 0.2, label = 'Max')
+    plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
     ax.set_ylabel('mean pairwise distances')
     ax.set_xlabel('layers')
     ax.set_title('mean pairwise distances per layer with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
     fig.savefig(this_path + suffix + 'mean_distances.pdf')
-    plt.legend() 
+    fig.legend() 
     plt.close(fig)
 
 
@@ -272,4 +283,4 @@ def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, p
     plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path)
     plot_data_projection(list_pca_3d, type_analysis='pca', dim=3, save_path='data_pca_3d.gif', pre_path=pre_path)
     plot_data_projection(list_random_2d, type_analysis='random', dim=2, save_path='data_random_2d.gif', pre_path=pre_path)
-    plot_data_projection(list_random_3d, type_analysis='pca', dim=3, save_path='data_random_3d.gif', pre_path=pre_path)
+    plot_data_projection(list_random_3d, type_analysis='random', dim=3, save_path='data_random_3d.gif', pre_path=pre_path)

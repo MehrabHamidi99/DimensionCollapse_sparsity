@@ -5,21 +5,21 @@ import os
 from functools import partial
 import pickle
 import argparse
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
-
-constant = 5
-archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 120, 1)]
-
-# constant = 100
-# archs2 = [(constant, [constant for _ in range(i)]) for i in range(1, 112, 10)]
-
-pool = multiprocessing.Pool(processes=100)
-
-pp = 'results_find_starting_point/constant_{}'.format(str(constant))
-
-def run_the_whole_thing(archs, normal_dist, scale, constant, parser):
-    pool = multiprocessing.Pool(processes=120)
-    prod_x=partial(one_random_experiment, exps=50, num=10000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), normal_dist=parser.normal_dist, loc=0, scale=parser.scale, exp_type=parser.exp_type)
+def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, projection_analysis_bool):
+    pool = multiprocessing.Pool(processes=40)
+    prod_x=partial(one_random_experiment, exps=20, num=5000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
+                   normal_dist=parser.normal_dist, loc=0, scale=parser.scale, exp_type=parser.exp_type, 
+                   projection_analysis_bool=projection_analysis_bool)
     result_list = pool.map(prod_x, archs)
 
     p_path = '{}/depth_analysis_{}/'.format(pp, constant)
@@ -31,28 +31,34 @@ def run_the_whole_thing(archs, normal_dist, scale, constant, parser):
     
     animate_histogram(result_list, 'hidden Layers',  pre_path=p_path)
 
-    # pool.close()
-
+    pool.close()
 
 
 if __name__ == '__main__':
-    def regul(archs, constant, parser):
-        run_the_whole_thing(archs, args.normal_dist, args.scale, constant, parser)
+    def regul(archs, constant, parser, pp):
+        run_the_whole_thing(archs, args.normal_dist, args.scale, constant, parser, pp, args.projection_analysis)
         print("done")
     
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--normal_dist', metavar='normal_dist', required=True,
-                        help='', type=bool)
+                        help='', type=str2bool)
     parser.add_argument('--scale', metavar='scale', required=True,
                         help='', type=int)
-    parser.add_argument('--exp_type', metavar='exp_type', required=True,
+    parser.add_argument('--exp_type', metavar='exp_type', required=False,
                     help='', type=str)
+    parser.add_argument('--constant', metavar='constant', required=True,
+                help='', type=int)
+    parser.add_argument('--projection_analysis', metavar='projection_analysis', required=True,
+            help='', type=str2bool)
     args = parser.parse_args()
+    constant = args.constant
+    print(args)
+    archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 1)]
     starttime = time.time()
+    pp = 'results_find_starting_point/constant_{}'.format(str(constant))
     # prod1=partial(regul)
     # pool.map(regul, [(archs1, 15), (archs2, 100)])
-    regul(archs1, constant, args)
+    regul(archs1, constant, args, pp)
     # regul(archs2, 100)
-    pool.close()
 
     print('That took {} seconds'.format(time.time() - starttime))

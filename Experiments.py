@@ -30,7 +30,8 @@ def stable_neuron_analysis(model, dataset, y=None):
         _ = model(torch.tensor(x, dtype=torch.float32), return_pre_activations=True)
         model.analysis_neurons_activations_depth_wise(dataset.shape[0])
 
-def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False, this_path='', exp_type='normal', constant=5):
+def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False, 
+                           this_path='', exp_type='normal', constant=5, projection_analysis_bool=False):
   '''
     Parameters
     model (torch.nn.Module): A trained PyTorch neural network model.
@@ -51,13 +52,18 @@ def one_random_dataset_run(model, n, d, normal_dist=False, loc=0, scale=1, retur
   stable_neuron_analysis(model, x)
   if not necc:
     return model.additive_activations, model.additive_activation_ratio
-  res = model.other_forward_analysis(x, return_eigenvalues)
+  res = model.other_forward_analysis(x, return_eigenvalues, projection_analysis_bool=projection_analysis_bool)
+  if projection_analysis_bool:
+    if return_eigenvalues:
+      return model.additive_activations, model.additive_activation_ratio, res[0], res[1], res[2], res[3], res[4], res[5], res[6], res[7]
+    return model.additive_activations, model.additive_activation_ratio, res, res[1], res[2], res[3], res[4], res[5], res[6]
+  else:
+    if return_eigenvalues:
+      return model.additive_activations, model.additive_activation_ratio, res[0], res[1]
+    return model.additive_activations, model.additive_activation_ratio, res[0]
 
-  if return_eigenvalues:
-    return model.additive_activations, model.additive_activation_ratio, res[0], res[1], res[2], res[3], res[4], res[5], res[6]
-  return model.additive_activations, model.additive_activation_ratio, res, res[1], res[2], res[3], res[4], res[5]
-
-def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, loc=0, scale=1, exp_type='normal', constant=5):
+def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, 
+                          loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True):
   '''
     Parameters
     architecture (tuple): A tuple where the first element is the number of input features, and the second element is a list of layer sizes for the network.
@@ -76,7 +82,8 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
     Used for conducting large-scale experiments to understand the behavior of different network architectures on random data.
   '''
 
-  this_path = file_name_handling('random_data_random_untrained_network', architecture, num=num, exps=exps, pre_path=pre_path, normal_dist=normal_dist, loc=loc, scale=scale)
+  this_path = file_name_handling('random_data_random_untrained_network', architecture, num=num, exps=exps, pre_path=pre_path, 
+                                 normal_dist=normal_dist, loc=loc, scale=scale)
       
   res_run1 = []
   res_run2 = []
@@ -86,30 +93,41 @@ def one_random_experiment(architecture, exps=500, num=1000, one=True, return_sth
   
   for i in range(exps):
     # r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
-    r1, r2 = one_random_dataset_run(model=net, n=num, d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, exp_type=exp_type, constant=constant)
+    r1, r2 = one_random_dataset_run(model=net, n=num, d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
+                                    exp_type=exp_type, constant=constant)
     res_run1 += [r1]
     res_run2 += [r2]
     # eigens += [eigens]
     # eigen_count += [count_num]
     net.reset()
   
-  _, _, eigen_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, \
-  distances = one_random_dataset_run(model=net, n=num,
-                                    d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
-                                    return_eigenvalues=True, necc=True, 
-                                    this_path=this_path, exp_type=exp_type, constant=constant)
-  
+  if projection_analysis_bool:
+    _, _, eigen_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats \
+    = one_random_dataset_run(model=net, n=num,
+                                      d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
+                                      return_eigenvalues=True, necc=True, 
+                                      this_path=this_path, exp_type=exp_type, constant=constant, 
+                                      projection_analysis_bool=projection_analysis_bool)
+  else:
+    _, _, eigen_count, eigens = one_random_dataset_run(model=net, n=num,
+                                      d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
+                                      return_eigenvalues=True, necc=True, 
+                                      this_path=this_path, exp_type=exp_type, constant=constant, 
+                                      projection_analysis_bool=projection_analysis_bool)
+
   res1 = np.array(res_run1).mean(axis=0)
   # eigen_count = np.array(eigen_count).mean(axis=0)
 
   plotting_actions(res1, eigen_count, num, this_path, net)
-
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
-  projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
-  animate_histogram(distances, 'layers: ', x_axis_title='pairwise distances distribution', save_path='distance_distribution.gif', pre_path=this_path, fixed_scale=True)
-  plot_distances(net=net, distances=distances, this_path=this_path)
+  if projection_analysis_bool:
+    projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
+    animate_histogram(distances, 'layers: ', x_axis_title='pairwise distances distribution / mean', save_path='distance_distribution.gif', 
+                      pre_path=this_path, fixed_scale=True, custom_range=scale * 2.5, step=False)
+    if stats:
+      plot_distances(net=net, distances=dis_stats, this_path=this_path)
 
   if return_sth:
     return res_run1, res_run2, net

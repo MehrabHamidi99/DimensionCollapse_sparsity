@@ -165,6 +165,9 @@ class MLP_ReLU(ParentNetwork):
           new_pre_activation = self.first_layer(x)
           # Apply ReLU activation to the first layer output
           new_activation = nn.ReLU()(new_pre_activation)
+          # new_activation = nn.LeakyReLU()(new_pre_activation)
+          # new_activation = new_pre_activation.clone()
+
 
           if return_activation_values:
             pre_activations = [new_pre_activation]
@@ -179,6 +182,8 @@ class MLP_ReLU(ParentNetwork):
               new_pre_activation = layer(new_activation)
               # Apply ReLU, except for the output layer
               new_activation = nn.ReLU()(new_pre_activation)
+              # new_activation = new_pre_activation.clone()
+              # new_activation = nn.LeakyReLU()(new_pre_activation)
 
               if return_activation_values:
                 pre_activations.append(new_pre_activation)
@@ -194,7 +199,7 @@ class MLP_ReLU(ParentNetwork):
             return output, pre_activations, activations
         return output
         
-    def other_forward_analysis(self, data, return_eigenvalues=False, plot_projection=True, calculate_distance=True):
+    def other_forward_analysis(self, data, return_eigenvalues=False, plot_projection=True, calculate_distance=True, projection_analysis_bool=False):
         eigenvalues = []
         eigenvalues_count = []
         plot_list_pca_2d = []
@@ -202,26 +207,37 @@ class MLP_ReLU(ParentNetwork):
         plot_list_random_2d = []
         plot_list_random_3d = []
         dis_values = []
+        dis_stats = []
 
         def append_handling(this_data):
-          dis_values.append(list(pdist(this_data)))
-
+          def c(m): 
+              xy=np.dot(m,m.T) # O(k^3)
+              x2=y2=(m*m).sum(1) #O(k^2)
+              d2=np.add.outer(x2,y2)-2*xy  #O(k^2)
+              d2.flat[::len(m)+1]=0 # Rounding issues
+              return d2
+              # return np.sqrt(d2)  # O (k^2)
           res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=return_eigenvalues)
           if return_eigenvalues:
             eigenvalues_count.append(res_list[0])
             eigenvalues.append(res_list[1])
           else:
             eigenvalues_count.append(res_list)
-          if plot_projection:
-            plot_list_pca_2d.append(projection_analysis(this_data, 'pca', 2))
-            plot_list_pca_3d.append(projection_analysis(this_data, 'pca', 3))
-            plot_list_random_2d.append(projection_analysis(this_data, 'random', 2))
-            plot_list_random_3d.append(projection_analysis(this_data, 'random', 3))
-
+          if projection_analysis_bool:
+            if plot_projection:
+              plot_list_pca_2d.append(projection_analysis(this_data, 'pca', 2))
+              plot_list_pca_3d.append(projection_analysis(this_data, 'pca', 3))
+              plot_list_random_2d.append(projection_analysis(this_data, 'random', 2))
+              plot_list_random_3d.append(projection_analysis(this_data, 'random', 3))
+              distances_this_data = c(this_data)
+              dis_values.append(distances_this_data / np.mean(distances_this_data))
+              dis_stats.append([np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)])
         append_handling(data)
 
         new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
         new_activation = nn.ReLU()(new_pre_activation)
+        # new_activation = new_pre_activation.clone()
+        # new_activation = nn.LeakyReLU()(new_pre_activation)
         new_data = new_activation.detach().clone().detach().numpy()
         append_handling(new_data)
 
@@ -229,14 +245,23 @@ class MLP_ReLU(ParentNetwork):
         for layer in self.hidden_layers:
             new_pre_activation = layer(new_activation)
             new_activation = nn.ReLU()(new_pre_activation)
+            # new_activation = new_pre_activation.clone()
+            # new_activation = nn.LeakyReLU()(new_pre_activation)
             new_data = new_activation.detach().clone().detach().numpy()
 
             append_handling(new_data)
-
-        if return_eigenvalues:
-          return eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, dis_values
+        if projection_analysis_bool:
+          if return_eigenvalues:
+            return eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, \
+            plot_list_random_2d, plot_list_random_3d, dis_values, dis_stats
+          else:
+            return eigenvalues_count, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, \
+              plot_list_random_3d, dis_values, dis_stats
         else:
-           return eigenvalues_count, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, dis_values
+          if return_eigenvalues:
+            return eigenvalues_count, eigenvalues
+          else:
+            return eigenvalues_count
 
 class ResNet_arch(nn.Module):
    

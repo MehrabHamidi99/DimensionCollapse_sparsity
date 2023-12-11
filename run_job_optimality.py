@@ -16,14 +16,13 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, projection_analysis_bool):
-    pool = multiprocessing.Pool(processes=120)
-    prod_x=partial(one_random_experiment, exps=20, num=5000, one=False, 
-                   pre_path='{}/width_analysis_{}/'.format(pp, constant), 
-                   normal_dist=parser.normal_dist, loc=0, scale=parser.scale, 
-                   exp_type=parser.exp_type, projection_analysis_bool=projection_analysis_bool)
+    pool = multiprocessing.Pool(processes=80)
+    prod_x=partial(one_random_experiment, exps=50, num=5000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
+                   normal_dist=parser.normal_dist, loc=0, scale=parser.scale, exp_type=parser.exp_type, 
+                   projection_analysis_bool=projection_analysis_bool)
     result_list = pool.map(prod_x, archs)
 
-    p_path = '{}/width_analysis_{}/'.format(pp, constant)
+    p_path = '{}/depth_analysis_{}/'.format(pp, constant)
     if normal_dist:
         p_path +=  'normal_std{}/'.format(str(scale))
 
@@ -34,30 +33,29 @@ def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, project
 
     pool.close()
 
+
 if __name__ == '__main__':
     def regul(archs, constant, parser, pp):
         run_the_whole_thing(archs, args.normal_dist, args.scale, constant, parser, pp, args.projection_analysis)
-        print("done")
+        print("done", flush=True)
     
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--normal_dist', metavar='normal_dist', required=True,
-                        help='', type=bool)
+                        help='', type=str2bool)
     parser.add_argument('--scale', metavar='scale', required=True,
                         help='', type=int)
     parser.add_argument('--exp_type', metavar='exp_type', required=False,
                     help='', type=str)
-    parser.add_argument('--constant', metavar='constant', required=True,
-                help='', type=int)
     parser.add_argument('--projection_analysis', metavar='projection_analysis', required=True,
-        help='', type=str2bool)
+            help='', type=str2bool)
     args = parser.parse_args()
+    for constant in tqdm(range(2, 150, 3)):
+        archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 30, 1)]
+        starttime = time.time()
+        pp = 'results_optimality/constant_{}'.format(str(constant))
+        # prod1=partial(regul)
+        # pool.map(regul, [(archs1, 15), (archs2, 100)])
+        regul(archs1, constant, args, pp)
+        # regul(archs2, 100)
 
-    constant_depth = args.constant
-    init_width = min(constant_depth, 3)
-    counter_number = min(4 * constant_depth, 120)
-    step = 1
-    archs_1 = [(init_width + i * step, [init_width + i * step for _ in range(constant_depth)]) for i in range(counter_number)]
-    starttime = time.time()
-    pp = 'results_find_starting_point/constant_{}'.format(str(constant_depth))
-    regul(archs_1, constant_depth, args, pp)
-    print('That took {} seconds'.format(time.time() - starttime))
+        print('That took {} seconds'.format(time.time() - starttime), flush=True)
