@@ -15,9 +15,16 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
+archs = [
+    [],
+    []
+]
+
+
 def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, projection_analysis_bool):
-    pool = multiprocessing.Pool(processes=30)
-    prod_x=partial(one_random_experiment, exps=30, num=5000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
+    pool = multiprocessing.Pool(processes=80)
+    prod_x=partial(one_random_experiment, exps=50, num=5000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
                    normal_dist=parser.normal_dist, loc=0, scale=parser.scale, exp_type=parser.exp_type, 
                    projection_analysis_bool=projection_analysis_bool)
     result_list = pool.map(prod_x, archs)
@@ -50,9 +57,9 @@ if __name__ == '__main__':
             help='', type=str2bool)
     args = parser.parse_args()
     for constant in tqdm(range(2, 150, 3)):
-        archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 26, 1)]
+        archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 30, 1)]
         starttime = time.time()
-        pp = 'results_optimality_all_big/constant_{}'.format(str(constant))
+        pp = 'results_optimality/constant_{}'.format(str(constant))
         # prod1=partial(regul)
         # pool.map(regul, [(archs1, 15), (archs2, 100)])
         regul(archs1, constant, args, pp)

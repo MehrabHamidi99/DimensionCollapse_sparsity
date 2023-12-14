@@ -20,6 +20,13 @@ import seaborn as sns
 import pandas as pd
 import random
 
+def c(m):
+    xy=np.dot(m,m.T) # O(k^3)
+    x2=y2=(m*m).sum(1) #O(k^2)
+    d2=np.add.outer(x2,y2)-2*xy  #O(k^2)
+    d2.flat[::len(m)+1]=0 # Rounding issues
+    return d2
+    # return np.sqrt(d2)  # O (k^2)
 
 def visualize_1D_boundaries(model, input_range=(-3, 3)):
     '''
@@ -241,7 +248,7 @@ def file_name_handling(which, architecture, num, exps=1, pre_path='', normal_dis
             this_path = pre_path + which + '_{}_{}_{}_exps{}_num{}/'.format(str(architecture[0]), str(architecture[1][0]), str(len(architecture[1])), str(exps), str(num))
             if not os.path.isdir(this_path):
                 os.makedirs(this_path)
-    print(this_path)
+    # print(this_path)
     return this_path
 
 def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):

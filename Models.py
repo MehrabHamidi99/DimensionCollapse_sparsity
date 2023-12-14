@@ -5,6 +5,7 @@ from utils import np
 from sklearn.manifold import TSNE
 import random
 from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import cdist
 
 class ParentNetwork(nn.Module, ABC):
     '''
@@ -143,8 +144,50 @@ class MLP_ReLU(ParentNetwork):
 
     def __init__(self, n_in, layer_list):
         super(MLP_ReLU, self).__init__(n_in, layer_list)
+
+    def better_forwad(self, x):
+        def whole_dataset(this_data):
+            res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
+            eigenvalues_count.append(res_list)
+            # distances_this_data = c(this_data)
+            distances_this_data = cdist(this_data, this_data)[np.triu_indices(this_data.shape[0], k=1)]
+            dis_values.append(distances_this_data / np.mean(distances_this_data))
+            dis_stats.append([np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)])
+
+        eigenvalues_count = []
+        dis_values = []
+        dis_stats = []
+        whole_dataset(x)
+
+        new_pre_activation = self.first_layer(x)
+        new_activation = nn.ReLU()(new_pre_activation)
+        i = 0
+        deteached_version = new_activation.cpu().clone().detach().numpy()
+        self.neurons_activations[np.sum(self.layer_list[:i + 1]): \
+                                 np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] =\
+                                np.sum((deteached_version > 0), axis=0)
+        i += 1
+        whole_dataset(deteached_version)
+
+        for layer in self.hidden_layers:
+            new_pre_activation = layer(new_activation)
+            new_activation = nn.ReLU()(new_pre_activation)
+            deteached_version = new_activation.cpu().clone().detach().numpy()
+
+            self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) \
+                                     + self.layer_list[i + 1]] =\
+                                    np.sum((deteached_version > 0), axis=0)
+            i += 1
+            whole_dataset(deteached_version)
+        
+
+
+        self.additive_activations += self.neurons_activations
+        self.reset_neurons_activation()
+        return eigenvalues_count, np.array(dis_values), dis_stats
+
     
-    def forward(self, x, return_pre_activations=False, return_activation_values=False, single_point=False):
+    def forward(self, x, data=None, device=None, return_pre_activations=False, return_activation_values=False, single_point=False):
         '''
         Performs a forward pass of the network.
 
@@ -168,15 +211,13 @@ class MLP_ReLU(ParentNetwork):
           # new_activation = nn.LeakyReLU()(new_pre_activation)
           # new_activation = new_pre_activation.clone()
 
-
           if return_activation_values:
             pre_activations = [new_pre_activation]
             activations = [new_activation]
 
           i = 0
-          self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.cpu().clone().detach() > 0).long().numpy()
+          self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.cpu().clone().detach() > 0).numpy()
           i += 1
-
           # Process hidden layers
           for layer in self.hidden_layers:
               new_pre_activation = layer(new_activation)
@@ -188,8 +229,7 @@ class MLP_ReLU(ParentNetwork):
               if return_activation_values:
                 pre_activations.append(new_pre_activation)
                 activations.append(new_activation)
-
-              self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.cpu().clone().detach() > 0).long().numpy()
+              self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.cpu().clone().detach() > 0).numpy()
               i += 1
               ########## TEST the whole procedure later
           if not single_point:
@@ -199,7 +239,7 @@ class MLP_ReLU(ParentNetwork):
             return output, pre_activations, activations
         return output
         
-    def other_forward_analysis(self, data, return_eigenvalues=False, plot_projection=True, calculate_distance=True, projection_analysis_bool=False):
+    def other_forward_analysis(self, data, device, rep=False,return_eigenvalues=False, plot_projection=True, calculate_distance=True, projection_analysis_bool=False):
         eigenvalues = []
         eigenvalues_count = []
         plot_list_pca_2d = []
@@ -210,31 +250,30 @@ class MLP_ReLU(ParentNetwork):
         dis_stats = []
 
         def append_handling(this_data):
-          def c(m): 
-              xy=np.dot(m,m.T) # O(k^3)
-              x2=y2=(m*m).sum(1) #O(k^2)
-              d2=np.add.outer(x2,y2)-2*xy  #O(k^2)
-              d2.flat[::len(m)+1]=0 # Rounding issues
-              return d2
-              # return np.sqrt(d2)  # O (k^2)
           res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=return_eigenvalues)
           if return_eigenvalues:
             eigenvalues_count.append(res_list[0])
             eigenvalues.append(res_list[1])
           else:
             eigenvalues_count.append(res_list)
-          if projection_analysis_bool:
-            if plot_projection:
-              plot_list_pca_2d.append(projection_analysis(this_data, 'pca', 2))
-              plot_list_pca_3d.append(projection_analysis(this_data, 'pca', 3))
-              plot_list_random_2d.append(projection_analysis(this_data, 'random', 2))
-              plot_list_random_3d.append(projection_analysis(this_data, 'random', 3))
-              distances_this_data = c(this_data)
-              dis_values.append(distances_this_data / np.mean(distances_this_data))
-              dis_stats.append([np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)])
+          if not rep:
+            if projection_analysis_bool:
+              if plot_projection:
+                plot_list_pca_2d.append(projection_analysis(this_data, 'pca', 2))
+                plot_list_pca_3d.append(projection_analysis(this_data, 'pca', 3))
+                plot_list_random_2d.append(projection_analysis(this_data, 'random', 2))
+                plot_list_random_3d.append(projection_analysis(this_data, 'random', 3))
+                distances_this_data = c(this_data)
+                dis_values.append(distances_this_data / np.mean(distances_this_data))
+                dis_stats.append([np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)])
+          else:
+            distances_this_data = c(this_data)
+            dis_values.append(distances_this_data / np.mean(distances_this_data))
+            dis_stats.append([np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)])
+
         append_handling(data)
 
-        new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32))
+        new_pre_activation = self.first_layer(torch.tensor(data, dtype=torch.float32).to(device))
         new_activation = nn.ReLU()(new_pre_activation)
         # new_activation = new_pre_activation.clone()
         # new_activation = nn.LeakyReLU()(new_pre_activation)
@@ -250,6 +289,8 @@ class MLP_ReLU(ParentNetwork):
             new_data = new_activation.detach().clone().detach().numpy()
 
             append_handling(new_data)
+        if rep:
+           return eigenvalues_count, dis_values, dis_stats
         if projection_analysis_bool:
           if return_eigenvalues:
             return eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, \
@@ -289,7 +330,7 @@ class ResNet_arch(nn.Module):
           activations = [new_activation]
 
         i = 0
-        self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).long().numpy()
+        self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).numpy()
         i += 1
 
         # Process hidden layers
@@ -302,7 +343,7 @@ class ResNet_arch(nn.Module):
               pre_activations.append(new_pre_activation)
               activations.append(new_activation)
 
-            self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).long().numpy()
+            self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).numpy()
             i += 1
             ########## TEST the whole procedure later
         if not single_point:
