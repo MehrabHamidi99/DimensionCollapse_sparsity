@@ -30,8 +30,7 @@ def stable_neuron_analysis(model, dataset, device, y=None):
         _ = model(torch.tensor(x, dtype=torch.float32).to(device), return_pre_activations=True)
     # return model.analysis_neurons_activations_depth_wise(dataset.shape[0])
 
-def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=1, return_eigenvalues=False, necc=False, 
-                           this_path='', exp_type='normal', constant=5, projection_analysis_bool=False, rep=False):
+def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=1, exp_type='normal', eval=False, constant=5):
   '''
     Parameters
     model (torch.nn.Module): A trained PyTorch neural network model.
@@ -51,20 +50,10 @@ def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=
   x, y = create_random_data(input_dimension=d, num=n, normal_dsit=normal_dist, loc=loc, scale=scale, exp_type=exp_type, constant=constant)
   # stable_neuron_analysis(model, x, device)
   model.to(device)
-  res = model.better_forwad(torch.tensor(x, dtype=torch.float32).to(device))
-  # model.analysis_neurons_activations_depth_wise(x.shape[0])
-  if not necc:
-    # res = model.other_forward_analysis(x, device, rep=rep, return_eigenvalues=return_eigenvalues, projection_analysis_bool=projection_analysis_bool)
-    return model.additive_activations, res[0], res[1], res[2]
-  res = model.other_forward_analysis(x, device, rep=rep, return_eigenvalues=return_eigenvalues, projection_analysis_bool=projection_analysis_bool)  
-  if projection_analysis_bool:
-    if return_eigenvalues:
-      return model.additive_activations, res[0], res[1], res[2], res[3], res[4], res[5], res[6], res[7]
-    return model.additive_activations, res, res[1], res[2], res[3], res[4], res[5], res[6]
-  else:
-    if return_eigenvalues:
-      return model.additive_activations, res[0], res[1]
-    return model.additive_activations, res[0]
+  if eval:
+    model.eval()
+  out = model.forward(torch.tensor(x, dtype=torch.float32).to(device))
+  return model.post_forward_neuron_activation_analysis(x)
 
 def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, 
                           loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True):
@@ -104,28 +93,19 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
     # r1 = one_random_dataset_run(model=net, n=num, device=device, d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
     #                                 exp_type=exp_type, constant=constant)
     r1, count_num, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
-                                    normal_dist=normal_dist, loc=loc, scale=scale, necc=False,
-                                    exp_type=exp_type, constant=constant, return_eigenvalues=False, rep=True)
+                                    normal_dist=normal_dist, loc=loc, scale=scale,
+                                    exp_type=exp_type, constant=constant, eval=False)
+    
     res_run1 += [r1]
     # eigens += [eigens]
     eigen_count += [count_num]
     dist_all = (dist_all + dists) / 2.0
     dist_stats += [dist_stats_this]
     net.reset()
-
-  if projection_analysis_bool:
-    _, _, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats \
-    = one_random_dataset_run(model=net, n=num, device=device,
-                                      d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
-                                      return_eigenvalues=True, necc=True, 
-                                      this_path=this_path, exp_type=exp_type, constant=constant, 
-                                      projection_analysis_bool=projection_analysis_bool)
-  else:
-    _, _, eigens = one_random_dataset_run(model=net, n=num, device=device,
-                                      d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
-                                      return_eigenvalues=True, necc=True, 
-                                      this_path=this_path, exp_type=exp_type, constant=constant, 
-                                      projection_analysis_bool=projection_analysis_bool)
+  
+  _, _, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
+                                    normal_dist=normal_dist, loc=loc, scale=scale,
+                                    exp_type=exp_type, constant=constant, eval=True)
 
   res1 = np.array(res_run1).mean(axis=0)
   eigen_count = np.array(eigen_count).mean(axis=0)
@@ -143,8 +123,8 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
       plot_distances(net=net, distances=dis_stats, this_path=this_path)
 
   if return_sth:
-    return res_run1, net
-  return res1 / num
+    return res1, net
+  return res1
 
 def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path='', normal_dist=False, loc=0, scale=1):
   '''

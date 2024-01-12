@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import cdist
 
 from collections import defaultdict
 
@@ -285,6 +287,15 @@ def plot_distances(net, distances, this_path, suffix=''):
     fig.legend() 
     plt.close(fig)
 
+
+def additional_analysis_for_full_data(this_data):
+    res = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
+    distances_this_data = cdist(this_data, this_data)[np.triu_indices(this_data.shape[0], k=1)]
+    return res, distances_this_data / np.mean(distances_this_data), [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
+
+def projection_analysis_for_full_data(this_data, return_eigenvalues):
+    res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=return_eigenvalues)
+    return res_list[1], projection_analysis(this_data, 'pca', 2), projection_analysis(this_data, 'pca', 3), projection_analysis(this_data, 'random', 2), projection_analysis(this_data, 'random', 3) 
 
 def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path):
     plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path)
