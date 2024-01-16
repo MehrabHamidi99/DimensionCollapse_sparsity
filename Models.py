@@ -11,8 +11,8 @@ class MLP_mnist(ParentNetwork):
      super(MLP_mnist, self).__init__(n_in=784, layer_list= hiddens + [10], bias=bias)
 
   def forward(self, x):
-      flatten_x = torch.flatten(x, start_dim=1).to(torch.float32)
-      output = self.layers(flatten_x)
+      # flatten_x = torch.flatten(x, start_dim=1)
+      output = self.layers(x.flatten(1))
       return output
 
 class MLP_ReLU(ParentNetwork):

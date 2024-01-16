@@ -1,6 +1,5 @@
-import numpy as np
-from torchvision import datasets, transforms
-import torch
+from utils import *
+
 
 def gaussian_hypersphere(D, N=1000, r=1, surface=True):
     """
@@ -144,7 +143,7 @@ def create_full_random_data(input_dimension, output_dim=1, train_num=800, val_nu
            (X_normalized[-test_num:], y_normalized[-test_num:])
 
 def creat_mnist_data():
-    transform = transforms.Compose([transforms.ToTensor(), 
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Lambda(torch.flatten),
                                             transforms.Normalize((0.5,), (0.5,))])
     dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
     train_set, val_set = torch.utils.data.random_split(dataset, [50000, 10000])

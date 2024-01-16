@@ -1,7 +1,3 @@
-import torch.optim as optim
-import torch.nn.functional as F
-from tqdm import tqdm
-
 from Models import *
 from utils import *
 from DataGenerator import *

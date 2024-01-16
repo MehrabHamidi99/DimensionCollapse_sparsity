@@ -21,6 +21,11 @@ import os
 import seaborn as sns
 import pandas as pd
 import random
+import torch.optim as optim
+import torch.nn.functional as F
+from torchvision import datasets, transforms
+
+from tqdm import tqdm
 
 def c(m):
     xy=np.dot(m,m.T) # O(k^3)

@@ -34,9 +34,8 @@ def run_function(arch_set, dest='results/tests'):
     pool.close()
 
 if __name__ == '__main__':
-    scale = 1
-    normal_dist = True
     starttime = time.time()
+    mnist_training_analysis([128, 64])
 
     print('with analysis shallow...')
     run_function(archs, 'results_init/training_analysis/')

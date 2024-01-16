@@ -1,7 +1,3 @@
-from utils import *
-import torch.nn as nn
-import numpy as np
-
 from Models import *
 from DataGenerator import *
 from utils import *
@@ -178,13 +174,12 @@ def mnist_training_analysis(architecture, epochs=50, pre_path=''):
 
   this_path = file_name_handling('mnist_analysis', architecture, pre_path=pre_path)
 
-  n_in = architecture[0]
-  simple_model = MLP_mnist(hiddens=architecture[1])
+  simple_model = MLP_mnist(hiddens=architecture).to(device)
 
   train_loader, val_loader, test_loader = get_mnist_data_loaders()
 
-  train_x = train_loader.dataset.dataset.data[train_loader.dataset.indices,:,:].to(device)
-  val_x = val_loader.dataset.dataset.data[val_loader.dataset.indices,:,:].to(device)
+  train_x = train_loader.dataset.dataset.data[train_loader.dataset.indices,:,:].to(torch.float32).to(device)
+  val_x = val_loader.dataset.dataset.data[val_loader.dataset.indices,:,:].to(torch.float32).to(device)
   test_x = test_loader.dataset.data.to(device)
 
   over_path = this_path + "untrained_"
