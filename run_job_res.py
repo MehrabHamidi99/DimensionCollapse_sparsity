@@ -17,7 +17,7 @@ def str2bool(v):
 
 def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, projection_analysis_bool):
     pool = multiprocessing.Pool(processes=70)
-    prod_x=partial(one_random_experiment, exps=20, num=10000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
+    prod_x=partial(one_random_experiment, exps=20, num=5000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
                    normal_dist=parser.normal_dist, loc=0, scale=parser.scale, exp_type=parser.exp_type, 
                    projection_analysis_bool=projection_analysis_bool)
     result_list = pool.map(prod_x, archs)

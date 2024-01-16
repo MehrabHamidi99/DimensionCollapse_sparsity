@@ -237,17 +237,18 @@ def count_near_zero_eigenvalues(data, threshold=0.0001, return_eigenvalues=False
         return near_zero_count, eigenvalues
     return near_zero_count
 
-def file_name_handling(which, architecture, num, exps=1, pre_path='', normal_dist=False, loc=0, scale=1):
+def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4):
     if normal_dist:
         pre_path += 'normal_std{}/'.format(str(scale))
     else:
         pre_path += 'uniform/'
-    this_path = pre_path + which + '_{}_exps{}_num{}/'.format(str(architecture), str(exps), str(num))
+    pre_path = pre_path + which + '_exps{}_num{}_center{}_bias{}'.format(str(exps), str(num), str(loc), str(bias))
+    this_path = pre_path + '_{}/'.format(str(architecture))
     if not os.path.isdir(this_path):
         try:
             os.makedirs(this_path)
         except OSError as exc:
-            this_path = pre_path + which + '_{}_{}_{}_exps{}_num{}/'.format(str(architecture[0]), str(architecture[1][0]), str(len(architecture[1])), str(exps), str(num))
+            this_path = pre_path + '_{}_{}_{}/'.format(str(architecture[0]), str(architecture[1][0]), str(len(architecture[1])))
             if not os.path.isdir(this_path):
                 os.makedirs(this_path)
     # print(this_path)

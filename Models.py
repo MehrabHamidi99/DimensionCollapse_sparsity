@@ -2,9 +2,18 @@ from utils import *
 from abc import ABC, abstractmethod
 from utils import nn
 from utils import np
-from sklearn.manifold import TSNE
-import random
 from ParentModels import *
+
+
+class MLP_mnist(ParentNetwork):
+
+  def __init__(self, hiddens=[128, 64], bias=1e-4):
+     super(MLP_mnist, self).__init__(n_in=784, layer_list= hiddens + [10], bias=bias)
+
+  def forward(self, x):
+      flatten_x = torch.flatten(x, start_dim=1).to(torch.float32)
+      output = self.layers(flatten_x)
+      return output
 
 class MLP_ReLU(ParentNetwork):
     '''
@@ -13,10 +22,10 @@ class MLP_ReLU(ParentNetwork):
     through a specified number of input dimensions and a list of layer sizes.
     '''
 
-    def __init__(self, n_in, layer_list, bias=1e-3):
+    def __init__(self, n_in, layer_list, bias=1e-4):
         super(MLP_ReLU, self).__init__(n_in, layer_list, bias=bias)
 
-    def forward(self, x, data=None, device=None,  return_activation_values=False, single_point=False):
+    def forward(self, x):
         '''
         Performs a forward pass of the network.
 

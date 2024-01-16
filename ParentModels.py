@@ -9,8 +9,9 @@ class CustomLinearWithActivation(nn.Linear):
         super(CustomLinearWithActivation, self).__init__(in_features, out_features, bias)
         self.activation = activation
         self.additional_analysis = additional_analysis
+        self.extra = False
         self.reinitialize_storing_values()
-        self.eval = False
+
         
     def reinitialize_storing_values(self):
         self.non_zero = 0
@@ -19,7 +20,7 @@ class CustomLinearWithActivation(nn.Linear):
           self.dis_values = []
           self.dis_stats = []
 
-        if self.eval:
+        if self.extra:
           self.eigenvalues = []
           self.plot_list_pca_2d = []
           self.plot_list_pca_3d = []
@@ -35,7 +36,7 @@ class CustomLinearWithActivation(nn.Linear):
         self.non_zero += np.sum((deteached_version > 0), axis=0)
         if self.additional_analysis:
           self.eigenvalues_count, self.dis_values, self.dis_stats = additional_analysis_for_full_data(deteached_version)
-        if self.eval:
+        if self.extra:
           self.eigenvalues, self.plot_list_pca_2d, self.plot_list_pca_3d, self.plot_list_random_2d, self.plot_list_random_3d = projection_analysis_for_full_data(deteached_version, True)
         return output
 
@@ -81,26 +82,26 @@ class ParentNetwork(nn.Module, ABC):
       self.additive_activations = np.zeros(np.sum(layer_list))
       self.additional_analysis = additional_analysis
 
-      self.eval_mode = False
+      self.extra_mode = False
       
     def get_layer_list(self):
        return self.layer_list[1:]
     
-    def eval(self):
+    def extra(self):
       '''
       Should call it before post_forward_neuron_activation_analysis:
-      eval()
+      extra()
       forward()
       post_forward_neuron_activation_analysis()
       '''
-      self.eval_mode = True
+      self.extra_mode = True
       for layer in self.layers:
-          layer.eval = self.eval_mode
+          layer.extra = self.extra_mode
 
-    def not_eval(self):
-      self.eval_mode = False
+    def not_extra(self):
+      self.extra_mode = False
       for layer in self.layers:
-          layer.additional_analysis = self.eval_mode
+          layer.additional_analysis = self.extra_mode
        
     def reset(self):
       '''
@@ -143,7 +144,7 @@ class ParentNetwork(nn.Module, ABC):
         eigenvalues_count = [tmp_res[0]]
         dis_values = [tmp_res[1]]
         dis_stats = [tmp_res[2]]        
-      if self.eval_mode:
+      if self.extra_mode:
         tmp_res = projection_analysis_for_full_data(full_data, True)
         eigenvalues = [tmp_res[0]]
         plot_list_pca_2d = [tmp_res[1]]
@@ -157,14 +158,14 @@ class ParentNetwork(nn.Module, ABC):
         eigenvalues_count.append(layer.eigenvalues_count)
         dis_values.append(layer.dis_values)
         dis_stats.append(layer.dis_stats)
-        if self.eval_mode:
+        if self.extra_mode:
           eigenvalues.append(layer.eigenvalues)
           plot_list_pca_2d.append(layer.plot_list_pca_2d)
           plot_list_pca_3d.append(layer.plot_list_pca_3d)
           plot_list_random_2d.append(layer.plot_list_random_2d)
           plot_list_random_3d.append(layer.plot_list_random_3d)
         i += 1
-      if self.eval_mode:
+      if self.extra_mode:
         return self.additive_activations, eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, np.array(dis_values), dis_stats
       else:
         return self.additive_activations, eigenvalues_count, np.array(dis_values), dis_stats

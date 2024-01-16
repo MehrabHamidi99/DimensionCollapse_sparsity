@@ -1,41 +1,14 @@
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
 from Models import *
 from utils import *
 from DataGenerator import *
-
-def stable_neuron_analysis(model, dataset, y=None, val=False):
-    '''
-    Parameters
-    model (torch.nn.Module): A trained PyTorch neural network model.
-    dataset (iterable): A dataset where each element is an input sample to the model.
-    y (iterable, optional): Output labels for the dataset, not used in the current implementation.
-    
-    Functionality
-    Iterates over each input sample in the dataset.
-    Performs a forward pass through the model to obtain pre-activation and activation values for each layer.
-    Invokes analysis_neurons_activations_depth_wise on the model to analyze neuron activations.
-    
-    Usage
-    Primarily used for understanding which neurons are consistently active or inactive across a dataset.
-    '''
-    if val:
-        for x in dataset:
-            model(torch.tensor(x.clone().detach(), dtype=torch.float32), return_pre_activations=True)
-            model.analysis_neurons_activations_depth_wise(len(dataset))
-        return
-
-    # Process each input in the dataset
-    for x, y in dataset:
-        # Get pre-activation and activation values for each layer
-        model(x, return_pre_activations=True)
-        model.analysis_neurons_activations_depth_wise(len(dataset.dataset))
+from ForwardPass import *
 
 
-def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0.001, validation_data=None):
+def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val_loader=None, epochs=50, learning_rate=0.001, loss='mse'):
     '''
     Parameters
     model (torch.nn.Module): A PyTorch neural network model to be trained.
@@ -74,33 +47,76 @@ def train_model(model, train_loader, val_loader=None, epochs=50, learning_rate=0
     '''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
+    
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    if loss == 'crossentropy':
+        criterion = nn.CrossEntropyLoss()
+    if loss == 'mse':
+        criterion = F.mse_loss()
 
-    val_analysis = []
+    # train_x = train_loader.dataset.dataset.data[train_loader.dataset.indices,:,:].to(device)
+    # val_x = val_loader.dataset.dataset.data[val_loader.dataset.indices,:,:].to(device)
+    # # test_x = test_loader.dataset.dataset[test_loader.dataset.indices,:,:].to(device)
 
+    train_add = []
+    train_eig = []
+    val_add = []
+    val_eig = []
     for epoch in tqdm(range(epochs)):
+        model.not_extra()
+        over_path = base_path + 'epoch_{}/'.format(str(epoch))
+        if not os.path.isdir(over_path):
+            os.makedirs(over_path)
+        
         model.train()
-        for x_batch, y_batch in train_loader:
-            x_batch, y_batch = x_batch.to(device), y_batch.to(device)
-
+        for x_batch, target in train_loader:
+            x_batch, target = x_batch.to(device), target.to(device)
             optimizer.zero_grad()
-            outputs = model(x_batch)
-            loss = F.mse_loss(outputs, y_batch)
+            output = model(x_batch)
+            loss = criterion(output, target)
             loss.backward()
             optimizer.step()
-
-        if val_loader is not None:
-            model.eval()
-            with torch.no_grad():
-                val_loss = 0
-                for x_val, y_val in val_loader:
-                    val_outputs = model(x_val.to(device), return_pre_activations=False).detach().cpu()
-                    val_loss += F.mse_loss(val_outputs, y_val).item()
-                    # model.analysis_neurons_activations_depth_wise()
-                # print(f'Epoch {epoch+1}, Validation Loss: {val_loss / len(val_loader)}')
         
-            stable_neuron_analysis(model, validation_data.to(device), val=True)
-            val_analysis += [model.additive_activations]
-            model.reset_all()
+        model.eval()
+        val_loss = 0
+        correct = 0
 
-    return val_analysis
+        with torch.no_grad():
+            model.not_extra()
+            for data, target in val_loader:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                val_loss += criterion(output, target).item()
+                pred = output.argmax(dim=1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
+            
+            additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'train', base_path, train_x)
+            train_add += [additive_act]
+            train_eig += [eigenvalues_count]
+            additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'val', base_path, val_x)
+            val_add += [additive_act]
+            val_eig += [eigenvalues_count]
+
+        val_loss /= len(val_loader.dataset)
+        print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Accuracy: {100. * correct / len(val_loader.dataset):.2f}%')
+
+    # over_path = base_path
+    model.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        model.not_extra()
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            test_loss += criterion(output, target).item()
+            pred = output.argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+        
+        # additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'test', base_path, test_x)
+
+    test_loss /= len(test_loader.dataset)
+    print(f'Val loss: {test_loss:.4f}, Accuracy: {100. * correct / len(test_loader.dataset):.2f}%')
+    print("Training Complete")
+
+    return train_add, train_eig, val_add, val_eig

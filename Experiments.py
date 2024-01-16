@@ -6,29 +6,7 @@ from Models import *
 from DataGenerator import *
 from utils import *
 from Training import *
-
-
-##########
-def stable_neuron_analysis(model, dataset, device, y=None):
-    '''
-    Parameters
-    model (torch.nn.Module): A trained PyTorch neural network model.
-    dataset (iterable): A dataset where each element is an input sample to the model.
-    y (iterable, optional): Output labels for the dataset, not used in the current implementation.
-    
-    Functionality
-    Iterates over each input sample in the dataset.
-    Performs a forward pass through the model to obtain pre-activation and activation values for each layer.
-    Invokes analysis_neurons_activations_depth_wise on the model to analyze neuron activations.
-    
-    Usage
-    Primarily used for understanding which neurons are consistently active or inactive across a dataset.
-    '''
-    # Process each input in the dataset
-    for x in dataset:
-        # Get pre-activation and activation values for each layer
-        _ = model(torch.tensor(x, dtype=torch.float32).to(device), return_pre_activations=True)
-    # return model.analysis_neurons_activations_depth_wise(dataset.shape[0])
+from ForwardPass import *
 
 def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=1, exp_type='normal', eval=False, constant=5):
   '''
@@ -49,14 +27,11 @@ def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=
   # visualize_1D_boundaries(net)
   x, y = create_random_data(input_dimension=d, num=n, normal_dsit=normal_dist, loc=loc, scale=scale, exp_type=exp_type, constant=constant)
   # stable_neuron_analysis(model, x, device)
-  model.to(device)
-  if eval:
-    model.eval()
-  out = model.forward(torch.tensor(x, dtype=torch.float32).to(device))
-  return model.post_forward_neuron_activation_analysis(x)
+  return stable_neuron_analysis(model, x, y, device, eval)
 
+  
 def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, 
-                          loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True):
+                          loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True, bias=1e-4):
   '''
     Parameters
     architecture (tuple): A tuple where the first element is the number of input features, and the second element is a list of layer sizes for the network.
@@ -77,7 +52,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   this_path = file_name_handling('random_data_random_untrained_network', architecture, num=num, exps=exps, pre_path=pre_path, 
-                                 normal_dist=normal_dist, loc=loc, scale=scale)
+                                 normal_dist=normal_dist, loc=loc, scale=scale, bias=bias)
       
   res_run1 = []
   # res_run2 = []
@@ -86,12 +61,9 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   dist_all = np.zeros((len(architecture[1]) + 1, int(num * (num - 1) / 2)))
   dist_stats = []
 
-  net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1])
+  net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
   net.to(device)
   for i in range(exps):
-    # r1, r2, count_num = one_random_dataset_run(net, num, architecture[0], normal_dist, loc, scale)
-    # r1 = one_random_dataset_run(model=net, n=num, device=device, d=architecture[0], normal_dist=normal_dist, loc=loc, scale=scale, 
-    #                                 exp_type=exp_type, constant=constant)
     r1, count_num, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,
                                     exp_type=exp_type, constant=constant, eval=False)
@@ -103,7 +75,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
     dist_stats += [dist_stats_this]
     net.reset()
   
-  _, _, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
+  _, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,
                                     exp_type=exp_type, constant=constant, eval=True)
 
@@ -114,7 +86,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   plotting_actions(res1, eigen_count, num, this_path, net)
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
-  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
+  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=True, custom_range=5)
   if projection_analysis_bool:
     projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
     animate_histogram(distances, 'layers: ', x_axis_title='pairwise distances distribution / mean', save_path='distance_distribution.gif', 
@@ -198,3 +170,38 @@ def before_after_training_experiment(architecture, num=1000, epochs=50, pre_path
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path)
 
   return simple_model.additive_activations / train[0].shape[0]
+
+
+
+def mnist_training_analysis(architecture, epochs=50, pre_path=''):
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+  this_path = file_name_handling('mnist_analysis', architecture, pre_path=pre_path)
+
+  n_in = architecture[0]
+  simple_model = MLP_mnist(hiddens=architecture[1])
+
+  train_loader, val_loader, test_loader = get_mnist_data_loaders()
+
+  train_x = train_loader.dataset.dataset.data[train_loader.dataset.indices,:,:].to(device)
+  val_x = val_loader.dataset.dataset.data[val_loader.dataset.indices,:,:].to(device)
+  test_x = test_loader.dataset.data.to(device)
+
+  over_path = this_path + "untrained_"
+  whole_data_analysis_forward_pass(simple_model, 'train', over_path=over_path, dataset_here=train_x)
+  whole_data_analysis_forward_pass(simple_model, 'val', over_path=over_path, dataset_here=val_x)
+  whole_data_analysis_forward_pass(simple_model, 'test', over_path=over_path, dataset_here=test_x)
+
+  train_add, train_eig, val_add, val_eig = train_model(simple_model, train_loader, test_loader, base_path=this_path, train_x=train_x, val_x=val_x, val_loader=val_loader, epochs=epochs, loss='crossentropy')
+
+  over_path = this_path + "trained_"
+  whole_data_analysis_forward_pass(simple_model, 'train', over_path=over_path, dataset_here=train_x)
+  whole_data_analysis_forward_pass(simple_model, 'val', over_path=over_path, dataset_here=val_x)
+  whole_data_analysis_forward_pass(simple_model, 'test', over_path=over_path, dataset_here=test_x)
+
+
+  # simple_model.to('cpu')
+  animate_histogram(train_add, 'epoch ', save_path='epoch_visualization_train.gif', pre_path=this_path)
+  animate_histogram(val_add, 'epoch ', save_path='epoch_visualization_val.gif', pre_path=this_path)
+  animate_histogram(train_eig, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise_train.gif', pre_path=this_path, fixed_scale=True, custom_range=5)
+  animate_histogram(val_eig, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise_val.gif', pre_path=this_path, fixed_scale=True, custom_range=5)
