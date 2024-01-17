@@ -58,6 +58,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
     train_eig = []
     val_add = []
     val_eig = []
+    print("start training")
     for epoch in tqdm(range(epochs)):
         model.not_extra()
         over_path = base_path + 'epoch_{}/'.format(str(epoch))
@@ -77,9 +78,9 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
         val_loss = 0
         correct = 0
 
-        additive_act, eigen_count, _, _ = model.post_forward_neuron_activation_analysis()
-        train_add += [additive_act]
-        train_eig += [eigen_count]
+        # additive_act, eigen_count, eigens, _ = model.post_forward_neuron_activation_analysis()
+        # train_add += [additive_act]
+        # train_eig += [eigens]
 
         with torch.no_grad():
             model.not_extra()
@@ -91,15 +92,17 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
             
-            # additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'train', base_path, train_x)
-            # train_eig += [eigenvalues_count]
-            # additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'val', base_path, val_x)
-            additive_act, eigenvalues_count, _, _  = model.post_forward_neuron_activation_analysis()
+            additive_act, _, eigens = whole_data_analysis_forward_pass(model, 'train', over_path, train_x)
+            train_eig += [eigens]
+            additive_act, _, eigens = whole_data_analysis_forward_pass(model, 'val', over_path, val_x)
+            # additive_act, eigenvalues_count, eigens, _  = model.post_forward_neuron_activation_analysis()
             val_add += [additive_act]
-            val_eig += [eigenvalues_count]
+            val_eig += [eigens]
 
         val_loss /= len(val_loader.dataset)
         print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Accuracy: {100. * correct / len(val_loader.dataset):.2f}%')
+
+        torch.save(model.state_dict(), over_path + "model")
 
     # over_path = base_path
     model.eval()

@@ -50,5 +50,5 @@ def whole_data_analysis_forward_pass(model, mode, over_path, dataset_here, scale
         plot_distances(net=model, distances=dis_stats, this_path=this_path)
 
     do_all(additive_act, eigenvalues_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats)
-    return additive_act, eigenvalues_count
+    return additive_act, eigenvalues_count, eigens
     

@@ -5,6 +5,8 @@ import os
 from functools import partial
 import pickle
 import argparse
+from tqdm import tqdm
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -51,14 +53,16 @@ if __name__ == '__main__':
     parser.add_argument('--projection_analysis', metavar='projection_analysis', required=True,
             help='', type=str2bool)
     args = parser.parse_args()
-    constant = args.constant
-    print(args)
-    archs1 = [(2, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 10)]
-    starttime = time.time()
-    pp = 'results_find_starting_point/constant_{}'.format(str(constant))
-    # prod1=partial(regul)
-    # pool.map(regul, [(archs1, 15), (archs2, 100)])
-    regul(archs1, constant, args, pp)
-    # regul(archs2, 100)
+    # constant = args.constant
+    constants = [5, 10, 20, 40, 70, 100]
+    for constant in tqdm(constants):
+        print(args)
+        archs1 = [(2, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 10)]
+        starttime = time.time()
+        pp = 'results_2d/constant_{}'.format(str(constant))
+        # prod1=partial(regul)
+        # pool.map(regul, [(archs1, 15), (archs2, 100)])
+        regul(archs1, constant, args, pp)
+        # regul(archs2, 100)
 
-    print('That took {} seconds'.format(time.time() - starttime))
+        print('That took {} seconds'.format(time.time() - starttime))
