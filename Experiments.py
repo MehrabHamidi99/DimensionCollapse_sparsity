@@ -54,7 +54,9 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   # res_run2 = []
   # eigens = []
   eigen_count = []
-  dist_all = np.zeros((len(architecture[1]) + 1, int(num * (num - 1) / 2)))
+  # dist_all = np.zeros((len(architecture[1]) + 1, int(num * (num - 1) / 2)))
+  dist_all = np.zeros((len(architecture[1]) + 1, num))
+
   dist_stats = []
 
   net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
@@ -71,7 +73,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
     dist_stats += [dist_stats_this]
     net.reset()
   
-  _, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
+  _, _, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,
                                     exp_type=exp_type, constant=constant, eval=True)
 
@@ -82,7 +84,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   plotting_actions(res1, eigen_count, num, this_path, net)
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
-  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=True, custom_range=5)
+  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=True, custom_range=1)
   if projection_analysis_bool:
     projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
     animate_histogram(distances, 'layers: ', x_axis_title='pairwise distances distribution / mean', save_path='distance_distribution.gif', 
@@ -178,14 +180,14 @@ def mnist_training_analysis(architecture, epochs=50, pre_path=''):
 
   train_loader, val_loader, test_loader = get_mnist_data_loaders()
 
-  train_x = train_loader.dataset.dataset.data[train_loader.dataset.indices,:,:].to(torch.float32).to(device)
-  val_x = val_loader.dataset.dataset.data[val_loader.dataset.indices,:,:].to(torch.float32).to(device)
-  test_x = test_loader.dataset.data.to(device)
+  train_x = train_loader.dataset.dataset.data[train_loader.dataset.indices,:,:].to(torch.float32).to(device).flatten(1)
+  val_x = val_loader.dataset.dataset.data[val_loader.dataset.indices,:,:].to(torch.float32).to(device).flatten(1)
+  test_x = test_loader.dataset.data.to(torch.float32).to(device).flatten(1)
 
   over_path = this_path + "untrained_"
-  whole_data_analysis_forward_pass(simple_model, 'train', over_path=over_path, dataset_here=train_x)
-  whole_data_analysis_forward_pass(simple_model, 'val', over_path=over_path, dataset_here=val_x)
-  whole_data_analysis_forward_pass(simple_model, 'test', over_path=over_path, dataset_here=test_x)
+  # whole_data_analysis_forward_pass(simple_model, 'train', over_path=over_path, dataset_here=train_x)
+  # whole_data_analysis_forward_pass(simple_model, 'val', over_path=over_path, dataset_here=val_x)
+  # whole_data_analysis_forward_pass(simple_model, 'test', over_path=over_path, dataset_here=test_x)
 
   train_add, train_eig, val_add, val_eig = train_model(simple_model, train_loader, test_loader, base_path=this_path, train_x=train_x, val_x=val_x, val_loader=val_loader, epochs=epochs, loss='crossentropy')
 
@@ -198,5 +200,5 @@ def mnist_training_analysis(architecture, epochs=50, pre_path=''):
   # simple_model.to('cpu')
   animate_histogram(train_add, 'epoch ', save_path='epoch_visualization_train.gif', pre_path=this_path)
   animate_histogram(val_add, 'epoch ', save_path='epoch_visualization_val.gif', pre_path=this_path)
-  animate_histogram(train_eig, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise_train.gif', pre_path=this_path, fixed_scale=True, custom_range=5)
-  animate_histogram(val_eig, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise_val.gif', pre_path=this_path, fixed_scale=True, custom_range=5)
+  animate_histogram(train_eig, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise_train.gif', pre_path=this_path, fixed_scale=True, custom_range=1)
+  animate_histogram(val_eig, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise_val.gif', pre_path=this_path, fixed_scale=True, custom_range=1)

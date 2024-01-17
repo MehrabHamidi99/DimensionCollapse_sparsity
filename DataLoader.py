@@ -3,7 +3,7 @@ from torch.utils.data import TensorDataset, DataLoader, Dataset
 import numpy as np
 from DataGenerator import *
         
-def get_mnist_data_loaders(batch_size=256):
+def get_mnist_data_loaders(batch_size=4000):
     # define transforms
     train, val, test = creat_mnist_data()
 

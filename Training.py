@@ -77,8 +77,13 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
         val_loss = 0
         correct = 0
 
+        additive_act, eigen_count, _, _ = model.post_forward_neuron_activation_analysis()
+        train_add += [additive_act]
+        train_eig += [eigen_count]
+
         with torch.no_grad():
             model.not_extra()
+            model.reset()
             for data, target in val_loader:
                 data, target = data.to(device), target.to(device)
                 output = model(data)
@@ -86,10 +91,10 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
             
-            additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'train', base_path, train_x)
-            train_add += [additive_act]
-            train_eig += [eigenvalues_count]
-            additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'val', base_path, val_x)
+            # additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'train', base_path, train_x)
+            # train_eig += [eigenvalues_count]
+            # additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'val', base_path, val_x)
+            additive_act, eigenvalues_count, _, _  = model.post_forward_neuron_activation_analysis()
             val_add += [additive_act]
             val_eig += [eigenvalues_count]
 
@@ -102,6 +107,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
     correct = 0
     with torch.no_grad():
         model.not_extra()
+        model.reset()
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
@@ -112,7 +118,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
         # additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'test', base_path, test_x)
 
     test_loss /= len(test_loader.dataset)
-    print(f'Val loss: {test_loss:.4f}, Accuracy: {100. * correct / len(test_loader.dataset):.2f}%')
+    print(f'test loss: {test_loss:.4f}, Accuracy: {100. * correct / len(test_loader.dataset):.2f}%')
     print("Training Complete")
 
     return train_add, train_eig, val_add, val_eig

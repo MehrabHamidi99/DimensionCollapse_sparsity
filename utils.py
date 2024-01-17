@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 from scipy.spatial.distance import cdist
+from scipy.linalg import eigh
 
 from collections import defaultdict
 
@@ -34,6 +35,12 @@ def c(m):
     d2.flat[::len(m)+1]=0 # Rounding issues
     return d2
     # return np.sqrt(d2)  # O (k^2)
+
+def distance_from_origin(vect):
+    if torch.is_tensor(vect):
+        vect_cop = vect.cpu().clone().detach().numpy()
+        return np.sqrt(np.sum(((vect_cop - np.zeros(vect_cop.shape)) ** 2), axis=1))
+    return np.sqrt(np.sum(((vect - np.zeros(vect.shape)) ** 2), axis=1))
 
 def visualize_1D_boundaries(model, input_range=(-3, 3)):
     '''
@@ -139,12 +146,16 @@ def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activat
     return anim
 
 def get_pc_components(data, n_components=2):
+    covar_matrix = np.matmul(data.T , data)
     # Perform PCA
-    pca = PCA(n_components=n_components)
-    pcs = pca.fit_transform(data)
+    d = covar_matrix.shape[0]
     if n_components == 3:
-        return pcs[:, 0], pcs[:, 1], pcs[:, 2]
-    return pcs[:, 0], pcs[:, 1]
+        values, vectors = eigh(covar_matrix, eigvals=(d - 3, d - 1), eigvals_only=False)
+        projected_data = np.dot(data, vectors)
+        return projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]
+    values, vectors = eigh(covar_matrix, eigvals=(d - 2, d - 1), eigvals_only=False)
+    projected_data = np.dot(data, vectors)
+    return projected_data[:, -1], projected_data[:, -2]
 
 def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
     N_plots = len(anim_pieces)
@@ -217,7 +228,7 @@ def projection_analysis(data, type_anal, dim):
             return data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]], data[0:data.shape[0], random_dims[2]]
     raise Exception("type or dim set wrong!")
 
-def count_near_zero_eigenvalues(data, threshold=0.0001, return_eigenvalues=False):
+def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvalues=False):
     """
     Counts the number of eigenvalues of the covariance matrix of the data that are close to zero.
 
@@ -228,18 +239,15 @@ def count_near_zero_eigenvalues(data, threshold=0.0001, return_eigenvalues=False
     Returns:
     int: The number of eigenvalues close to zero.
     """
-
-    # Perform PCA
-    pca = PCA()
-    pca.fit(data)
-
-    # Eigenvalues
-    eigenvalues = pca.explained_variance_
-
-    # Count eigenvalues close to zero
-    near_zero_count = np.sum(np.abs(eigenvalues) > threshold)
+    covar_matrix = np.matmul(data.T , data)
     if return_eigenvalues:
-        return near_zero_count, eigenvalues
+        values, vectors = eigh(covar_matrix, eigvals_only=False)
+
+        near_zero_count = np.sum(np.abs(values) > threshold)
+        return near_zero_count, vectors
+    
+    values = eigh(covar_matrix, eigvals_only=True)
+    near_zero_count = np.sum(np.abs(values) > threshold)
     return near_zero_count
 
 def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4):
@@ -282,7 +290,6 @@ def plot_distances(net, distances, this_path, suffix=''):
     fig, ax = plt.subplots(figsize=(10, 10))
     X_axis = np.arange(len(distances))
     dis_stat = np.array(distances)
-    print(dis_stat.shape)
     plt.bar(X_axis - 0.2, dis_stat[:, 0], 0.2, label = 'Mean')
     plt.bar(X_axis + 0.0, dis_stat[:, 1], 0.2, label = 'Max')
     plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
@@ -296,7 +303,8 @@ def plot_distances(net, distances, this_path, suffix=''):
 
 def additional_analysis_for_full_data(this_data):
     res = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
-    distances_this_data = cdist(this_data, this_data)[np.triu_indices(this_data.shape[0], k=1)]
+    # cdist(this_data, np.array([np.zeros(this_data.shape[1])]))
+    distances_this_data = distance_from_origin(this_data)
     return res, distances_this_data / np.mean(distances_this_data), [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
 
 def projection_analysis_for_full_data(this_data, return_eigenvalues):

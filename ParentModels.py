@@ -34,10 +34,10 @@ class CustomLinearWithActivation(nn.Linear):
 
         deteached_version = output.cpu().clone().detach().numpy()
         self.non_zero += np.sum((deteached_version > 0), axis=0)
-        if self.additional_analysis:
-          self.eigenvalues_count, self.dis_values, self.dis_stats = additional_analysis_for_full_data(deteached_version)
         if self.extra:
           self.eigenvalues, self.plot_list_pca_2d, self.plot_list_pca_3d, self.plot_list_random_2d, self.plot_list_random_3d = projection_analysis_for_full_data(deteached_version, True)
+        if self.additional_analysis:
+          self.eigenvalues_count, self.dis_values, self.dis_stats = additional_analysis_for_full_data(deteached_version)
         return output
 
 class ParentNetwork(nn.Module, ABC):
@@ -101,7 +101,7 @@ class ParentNetwork(nn.Module, ABC):
     def not_extra(self):
       self.extra_mode = False
       for layer in self.layers:
-          layer.additional_analysis = self.extra_mode
+          layer.extra = self.extra_mode
        
     def reset(self):
       '''
@@ -138,37 +138,56 @@ class ParentNetwork(nn.Module, ABC):
                 biases.append(v)
         return weights, biases
     
-    def post_forward_neuron_activation_analysis(self, full_data):
-      if self.additional_analysis:
-        tmp_res = additional_analysis_for_full_data(full_data)
-        eigenvalues_count = [tmp_res[0]]
-        dis_values = [tmp_res[1]]
-        dis_stats = [tmp_res[2]]        
-      if self.extra_mode:
-        tmp_res = projection_analysis_for_full_data(full_data, True)
-        eigenvalues = [tmp_res[0]]
-        plot_list_pca_2d = [tmp_res[1]]
-        plot_list_pca_3d = [tmp_res[2]]
-        plot_list_random_2d = [tmp_res[3]]
-        plot_list_random_3d = [tmp_res[4]]   
-
+    def post_forward_neuron_activation_analysis(self, full_data=None):
+      if full_data is not None:
+        if self.extra_mode:
+          if torch.is_tensor(full_data):
+            full_data = full_data.cpu().clone().detach().numpy()
+          tmp_res = projection_analysis_for_full_data(full_data, True)
+          eigenvalues = [tmp_res[0]]
+          plot_list_pca_2d = [tmp_res[1]]
+          plot_list_pca_3d = [tmp_res[2]]
+          plot_list_random_2d = [tmp_res[3]]
+          plot_list_random_3d = [tmp_res[4]]   
+        if self.additional_analysis:
+          tmp_res = additional_analysis_for_full_data(full_data)
+          eigenvalues_count = [tmp_res[0]]
+          dis_values = [tmp_res[1]]
+          dis_stats = [tmp_res[2]]
+      else:
+        if self.extra_mode:
+          eigenvalues = []
+          plot_list_pca_2d = []
+          plot_list_pca_3d = []
+          plot_list_random_2d = []
+          plot_list_random_3d = []   
+        if self.additional_analysis:
+          eigenvalues_count = []
+          dis_values = []
+          dis_stats = []
+         
       i = 0
+  
       for layer in self.layers:
         self.additive_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = layer.non_zero
-        eigenvalues_count.append(layer.eigenvalues_count)
-        dis_values.append(layer.dis_values)
-        dis_stats.append(layer.dis_stats)
         if self.extra_mode:
           eigenvalues.append(layer.eigenvalues)
           plot_list_pca_2d.append(layer.plot_list_pca_2d)
           plot_list_pca_3d.append(layer.plot_list_pca_3d)
           plot_list_random_2d.append(layer.plot_list_random_2d)
           plot_list_random_3d.append(layer.plot_list_random_3d)
+        if self.additional_analysis:
+          eigenvalues_count.append(layer.eigenvalues_count)
+          dis_values.append(layer.dis_values)
+          dis_stats.append(layer.dis_stats)
         i += 1
+      
       if self.extra_mode:
         return self.additive_activations, eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, np.array(dis_values), dis_stats
-      else:
+      if self.additional_analysis:
         return self.additive_activations, eigenvalues_count, np.array(dis_values), dis_stats
+      else:
+        return self.additive_activations
       
     def analysis_neurons_activations_depth_wise(self, num):
       ##### TODO!!!!!
