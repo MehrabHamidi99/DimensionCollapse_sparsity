@@ -17,11 +17,11 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, projection_analysis_bool):
+def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, projection_analysis_bool, bias):
     pool = multiprocessing.Pool(processes=40)
     prod_x=partial(one_random_experiment, exps=20, num=10000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
                    normal_dist=parser.normal_dist, loc=0, scale=parser.scale, exp_type=parser.exp_type, 
-                   projection_analysis_bool=projection_analysis_bool)
+                   projection_analysis_bool=projection_analysis_bool, bias=bias)
     result_list = pool.map(prod_x, archs)
 
     p_path = '{}/depth_analysis_{}/'.format(pp, constant)
@@ -37,8 +37,8 @@ def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, project
 
 
 if __name__ == '__main__':
-    def regul(archs, constant, parser, pp):
-        run_the_whole_thing(archs, args.normal_dist, args.scale, constant, parser, pp, args.projection_analysis)
+    def regul(archs, constant, parser, pp, bias):
+        run_the_whole_thing(archs, args.normal_dist, args.scale, constant, parser, pp, args.projection_analysis, bias)
         print("done")
     
     parser = argparse.ArgumentParser(description='')
@@ -54,15 +54,16 @@ if __name__ == '__main__':
             help='', type=str2bool)
     args = parser.parse_args()
     # constant = args.constant
-    constants = [5, 10, 20, 40, 70, 100]
+    constants = [5, 10, 20, 60, 100]
+    biasses = [0, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
     for constant in tqdm(constants):
-        print(args)
-        archs1 = [(2, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 10)]
-        starttime = time.time()
-        pp = 'results_2d/constant_{}'.format(str(constant))
-        # prod1=partial(regul)
-        # pool.map(regul, [(archs1, 15), (archs2, 100)])
-        regul(archs1, constant, args, pp)
-        # regul(archs2, 100)
+        for bias in tqdm(biasses):
+            archs1 = [(2, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 10)] + [(constant, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 10)] 
+            starttime = time.time()
+            pp = 'results_2d_biasses/constant_{}'.format(str(constant))
+            # prod1=partial(regul)
+            # pool.map(regul, [(archs1, 15), (archs2, 100)])
+            regul(archs1, constant, args, pp, bias)
+            # regul(archs2, 100)
 
-        print('That took {} seconds'.format(time.time() - starttime))
+            print('That took {} seconds'.format(time.time() - starttime))

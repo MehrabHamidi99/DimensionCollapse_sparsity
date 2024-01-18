@@ -255,7 +255,7 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
         pre_path += 'normal_std{}/'.format(str(scale))
     else:
         pre_path += 'uniform/'
-    pre_path = pre_path + which + '_exps{}_num{}_center{}_bias{}'.format(str(exps), str(num), str(loc), str(bias))
+    pre_path = pre_path + which + str(bias) + "/" + '_exps{}_num{}_center{}'.format(str(exps), str(num), str(loc))
     this_path = pre_path + '_{}/'.format(str(architecture))
     if not os.path.isdir(this_path):
         try:

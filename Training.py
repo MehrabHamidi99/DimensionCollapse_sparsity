@@ -93,10 +93,11 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
                 correct += pred.eq(target.view_as(pred)).sum().item()
             
             additive_act, _, eigens = whole_data_analysis_forward_pass(model, 'train', over_path, train_x)
-            train_eig += [eigens]
+            train_eig.append(eigens)
+            train_add += [additive_act]
             additive_act, _, eigens = whole_data_analysis_forward_pass(model, 'val', over_path, val_x)
             # additive_act, eigenvalues_count, eigens, _  = model.post_forward_neuron_activation_analysis()
-            val_add += [additive_act]
+            val_add.append(additive_act)
             val_eig += [eigens]
 
         val_loss /= len(val_loader.dataset)
