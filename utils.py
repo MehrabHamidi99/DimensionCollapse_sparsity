@@ -198,7 +198,7 @@ def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers:
     try:
         anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
     except RuntimeError:
-        print("Imagemagick writer not found. Falling back to Pillow writer.")
+        # print("Imagemagick writer not found. Falling back to Pillow writer.")
         try:
             anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
         except Exception:
@@ -305,7 +305,7 @@ def additional_analysis_for_full_data(this_data):
     res = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
     # cdist(this_data, np.array([np.zeros(this_data.shape[1])]))
     distances_this_data = distance_from_origin(this_data)
-    return res, distances_this_data / np.mean(distances_this_data), [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
+    return res, distances_this_data, [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
 
 def projection_analysis_for_full_data(this_data, return_eigenvalues):
     res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=return_eigenvalues)

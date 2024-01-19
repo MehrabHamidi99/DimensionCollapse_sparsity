@@ -1,10 +1,7 @@
 import numpy as np
-from keras import initializations
-
-from keras.initializers import _compute_fans
 from tensorflow.python.ops.random_ops import random_normal
 from struct import unpack
-from sonnet import AbstractModule, Linear
+# from sonnet import AbstractModule, Linear
 import tensorflow as tf
 import pickle
 
@@ -37,16 +34,16 @@ def count_neurons(network, input_shape):
                 shape[1] = int(shape[1] / 2)
         return result
 
-def weight_initializer(shape, dtype, partition_info):
-    fan_in = _compute_fans(shape)[0]
-    return random_normal(shape, stddev=(np.sqrt(2. / fan_in)))
+# def weight_initializer(shape, dtype, partition_info):
+#     fan_in = _compute_fans(shape)[0]
+#     return random_normal(shape, stddev=(np.sqrt(2. / fan_in)))
 
-def get_weight_initializer(scale):
-    return lambda shape, dtype, partition_info: random_normal(
-        shape, stddev=scale * (np.sqrt(2. / _compute_fans(shape)[0])))
+# def get_weight_initializer(scale):
+#     return lambda shape, dtype, partition_info: random_normal(
+#         shape, stddev=scale * (np.sqrt(2. / _compute_fans(shape)[0])))
 
-def bias_initializer(bias_std):
-    return lambda shape, dtype, partition_info: random_normal(shape, stddev=bias_std)
+# def bias_initializer(bias_std):
+#     return lambda shape, dtype, partition_info: random_normal(shape, stddev=bias_std)
 
 def get_all_regions(sess, input_data, output_data, relu_states, input_placeholder, output_placeholder,
                     return_hashes=True):
@@ -99,32 +96,32 @@ def load_cifar(paths, flat=True):
 def random_string():
     return str(np.random.random())[2:]
 
-class MLP(AbstractModule):
-    def __init__(self, bias_std, lr, widths, output_size, name='mlp'):
-        super(MLP, self).__init__(name=name)
-        self.bias_std = bias_std
-        self.lr = lr
-        self.widths = widths
-        self.output_size = output_size
+# class MLP(AbstractModule):
+#     def __init__(self, bias_std, lr, widths, output_size, name='mlp'):
+#         super(MLP, self).__init__(name=name)
+#         self.bias_std = bias_std
+#         self.lr = lr
+#         self.widths = widths
+#         self.output_size = output_size
 
-    def _build(self, input_placeholder):
-        preacts = []
-        relu = input_placeholder
-        for width in self.widths:
-            dense_layer = Linear(width, initializers={'w': weight_initializer,
-                                                      'b': bias_initializer(self.bias_std)})(relu)
-            preacts.append(dense_layer)
-            relu = tf.nn.relu(dense_layer)
-        output_layer = Linear(self.output_size, initializers={'w': weight_initializer,
-                                                              'b': bias_initializer(self.bias_std)})(relu)
-        return output_layer, preacts
+#     def _build(self, input_placeholder):
+#         preacts = []
+#         relu = input_placeholder
+#         for width in self.widths:
+#             dense_layer = Linear(width, initializers={'w': weight_initializer,
+#                                                       'b': bias_initializer(self.bias_std)})(relu)
+#             preacts.append(dense_layer)
+#             relu = tf.nn.relu(dense_layer)
+#         output_layer = Linear(self.output_size, initializers={'w': weight_initializer,
+#                                                               'b': bias_initializer(self.bias_std)})(relu)
+#         return output_layer, preacts
 
-    def get_ops(self, output_layer, output_placeholder):
-        loss = tf.losses.sparse_softmax_cross_entropy(output_placeholder, output_layer)
-        correct = tf.equal(output_placeholder, tf.argmax(tf.nn.softmax(output_layer), axis=-1))
-        acc = 100 * tf.reduce_mean(tf.cast(correct, tf.float32))
-        train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
-        return train_op, loss, acc
+#     def get_ops(self, output_layer, output_placeholder):
+#         loss = tf.losses.sparse_softmax_cross_entropy(output_placeholder, output_layer)
+#         correct = tf.equal(output_placeholder, tf.argmax(tf.nn.softmax(output_layer), axis=-1))
+#         acc = 100 * tf.reduce_mean(tf.cast(correct, tf.float32))
+#         train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
+#         return train_op, loss, acc
 
 def calculate_distances(the_weights, the_preacts):
     distances = []

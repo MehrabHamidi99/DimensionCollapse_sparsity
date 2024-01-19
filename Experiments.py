@@ -177,6 +177,7 @@ def mnist_training_analysis(architecture, epochs=50, pre_path=''):
   this_path = file_name_handling('mnist_analysis', architecture, pre_path=pre_path)
 
   simple_model = MLP_mnist(hiddens=architecture).to(device)
+  simple_model.extra()
 
   train_loader, val_loader, test_loader = get_mnist_data_loaders()
 

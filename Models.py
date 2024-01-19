@@ -12,6 +12,7 @@ class MLP_mnist(ParentNetwork):
 
   def forward(self, x):
       # flatten_x = torch.flatten(x, start_dim=1)
+      self.change_key = False
       output = self.layers(x.flatten(1))
       return output
 
@@ -38,6 +39,7 @@ class MLP_ReLU(ParentNetwork):
         Returns:
         Output of the network, and optionally, pre-activations and activations.
         '''
+        self.change_key = False
         output = self.layers(x)
         return output
 

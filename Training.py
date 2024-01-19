@@ -60,7 +60,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
     val_eig = []
     print("start training")
     for epoch in tqdm(range(epochs)):
-        model.not_extra()
+        # model.not_extra()
         over_path = base_path + 'epoch_{}/'.format(str(epoch))
         if not os.path.isdir(over_path):
             os.makedirs(over_path)
@@ -82,7 +82,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
         train_add += [additive_act]
 
         with torch.no_grad():
-            model.not_extra()
+            # model.not_extra()
             model.reset()
             for data, target in val_loader:
                 data, target = data.to(device), target.to(device)
@@ -106,7 +106,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
     test_loss = 0
     correct = 0
     with torch.no_grad():
-        model.not_extra()
+        # model.not_extra()
         model.reset()
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)

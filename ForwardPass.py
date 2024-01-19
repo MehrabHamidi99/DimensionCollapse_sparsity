@@ -34,7 +34,7 @@ def stable_neuron_analysis(model, dataset, labels, device, eval):
 
 
 def stable_mnist_analysis(model, mode, over_path, dataset_here, data_loader, device, scale=1):
-    model.extra()
+    # model.extra()
     for data, _ in data_loader:
         _ = model(data.to(device))
     return whole_data_analysis_forward_pass(model, mode, over_path, dataset_here, scale)

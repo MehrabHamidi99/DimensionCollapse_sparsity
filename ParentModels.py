@@ -83,6 +83,8 @@ class ParentNetwork(nn.Module, ABC):
       self.additional_analysis = additional_analysis
 
       self.extra_mode = False
+
+      self.change_key = True
       
     def get_layer_list(self):
        return self.layer_list[1:]
@@ -94,11 +96,15 @@ class ParentNetwork(nn.Module, ABC):
       forward()
       post_forward_neuron_activation_analysis()
       '''
+      if not self.change_key:
+         raise Exception("Try to change mode while change key is false!")
       self.extra_mode = True
       for layer in self.layers:
           layer.extra = self.extra_mode
 
     def not_extra(self):
+      if not self.change_key:
+         raise Exception("Try to change mode while change key is false!")
       self.extra_mode = False
       for layer in self.layers:
           layer.extra = self.extra_mode
@@ -140,9 +146,9 @@ class ParentNetwork(nn.Module, ABC):
     
     def post_forward_neuron_activation_analysis(self, full_data=None):
       if full_data is not None:
-        if self.extra_mode:
-          if torch.is_tensor(full_data):
+        if torch.is_tensor(full_data):
             full_data = full_data.cpu().clone().detach().numpy()
+        if self.extra_mode:
           tmp_res = projection_analysis_for_full_data(full_data, True)
           eigenvalues = [tmp_res[0]]
           plot_list_pca_2d = [tmp_res[1]]
@@ -181,11 +187,13 @@ class ParentNetwork(nn.Module, ABC):
           dis_values.append(np.array(layer.dis_values))
           dis_stats.append(layer.dis_stats)
         i += 1
+
+      self.change_key = True
       
       if self.extra_mode:
         return self.additive_activations, eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, np.array(dis_values), dis_stats
       if self.additional_analysis:
-        return self.additive_activations, eigenvalues_count, np.array(dis_values), dis_stats
+        return self.additive_activations, eigenvalues_count, np.array(dis_values, dtype=object), dis_stats
       else:
         return self.additive_activations
       
