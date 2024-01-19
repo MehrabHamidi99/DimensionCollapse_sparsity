@@ -77,10 +77,9 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
         model.eval()
         val_loss = 0
         correct = 0
-
-        # additive_act, eigen_count, eigens, _ = model.post_forward_neuron_activation_analysis()
-        # train_add += [additive_act]
-        # train_eig += [eigens]
+        additive_act, _, eigens = whole_data_analysis_forward_pass(model, 'train', over_path, train_x)
+        train_eig.append(eigens)
+        train_add += [additive_act]
 
         with torch.no_grad():
             model.not_extra()
@@ -92,11 +91,8 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
             
-            additive_act, _, eigens = whole_data_analysis_forward_pass(model, 'train', over_path, train_x)
-            train_eig.append(eigens)
-            train_add += [additive_act]
+
             additive_act, _, eigens = whole_data_analysis_forward_pass(model, 'val', over_path, val_x)
-            # additive_act, eigenvalues_count, eigens, _  = model.post_forward_neuron_activation_analysis()
             val_add.append(additive_act)
             val_eig += [eigens]
 

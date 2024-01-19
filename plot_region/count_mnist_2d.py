@@ -4,10 +4,10 @@ import pickle
 import os
 from tools import weight_initializer, bias_initializer, load_mnist, random_string, get_sample_plane3, count_regions_2d
 
-TRAIN = ('../datasets/mnist/train-images-idx3-ubyte',
-         '../datasets/mnist/train-labels-idx1-ubyte')
-TEST = ('../datasets/mnist/t10k-images-idx3-ubyte',
-        '../datasets/mnist/t10k-labels-idx1-ubyte')
+TRAIN = ('./data/MNIST/train-images-idx3-ubyte',
+         './data/MNIST/train-labels-idx1-ubyte')
+TEST = ('./data/MNIST/t10k-images-idx3-ubyte',
+        './data/MNIST/t10k-labels-idx1-ubyte')
 NETWORKS = [[16, 16, 16, 16], [32, 32, 32, 32], [64, 64, 64, 64], [20, 20, 20], [40, 40, 40], [60, 60, 60], [80, 80, 80]]
 BIAS_STD = 0.001
 REPEATS = 5

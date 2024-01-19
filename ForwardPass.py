@@ -30,14 +30,19 @@ def stable_neuron_analysis(model, dataset, labels, device, eval):
         # Get pre-activation and activation values for each layer
         _ = model(x_)
     # return model.analysis_neurons_activations_depth_wise(dataset.shape[0])
-    return model.post_forward_neuron_activation_analysis(x)
+    return model.post_forward_neuron_activation_analysis(dataset)
+
+
+def stable_mnist_analysis(model, mode, over_path, dataset_here, data_loader, device, scale=1):
+    model.extra()
+    for data, _ in data_loader:
+        _ = model(data.to(device))
+    return whole_data_analysis_forward_pass(model, mode, over_path, dataset_here, scale)
+    
 
 
 def whole_data_analysis_forward_pass(model, mode, over_path, dataset_here, scale=1):
-    model.reset()
-    model.extra()
-    model(dataset_here)
-    # model.extra()
+
     additive_act, eigenvalues_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats = model.post_forward_neuron_activation_analysis(dataset_here)
     this_path = over_path + mode + '_'
     def do_all(additive_act, eigenvalues_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats):
@@ -50,5 +55,6 @@ def whole_data_analysis_forward_pass(model, mode, over_path, dataset_here, scale
         plot_distances(net=model, distances=dis_stats, this_path=this_path)
 
     do_all(additive_act, eigenvalues_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats)
+    model.reset()
     return additive_act, eigenvalues_count, eigens
     

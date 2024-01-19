@@ -136,7 +136,7 @@ def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activat
     try:
         anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
     except RuntimeError:
-        print("Imagemagick writer not found. Falling back to Pillow writer.")
+        # print("Imagemagick writer not found. Falling back to Pillow writer.")
         try:
             anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
         except Exception:
@@ -255,7 +255,7 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
         pre_path += 'normal_std{}/'.format(str(scale))
     else:
         pre_path += 'uniform/'
-    pre_path = pre_path + which + str(bias) + "/" + '_exps{}_num{}_center{}'.format(str(exps), str(num), str(loc))
+    pre_path = pre_path + which + "/" + 'bias{}_exps{}_num{}_center{}'.format(str(bias), str(exps), str(num), str(loc))
     this_path = pre_path + '_{}/'.format(str(architecture))
     if not os.path.isdir(this_path):
         try:
@@ -264,7 +264,7 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
             this_path = pre_path + '_{}_{}_{}/'.format(str(architecture[0]), str(architecture[1][0]), str(len(architecture[1])))
             if not os.path.isdir(this_path):
                 os.makedirs(this_path)
-    # print(this_path)
+    print(this_path)
     return this_path
 
 def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):
@@ -292,12 +292,12 @@ def plot_distances(net, distances, this_path, suffix=''):
     dis_stat = np.array(distances)
     plt.bar(X_axis - 0.2, dis_stat[:, 0], 0.2, label = 'Mean')
     plt.bar(X_axis + 0.0, dis_stat[:, 1], 0.2, label = 'Max')
-    plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
+    # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
     ax.set_ylabel('mean distances from origin')
     ax.set_xlabel('layers')
     ax.set_title('mean distances from origin per layer with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
-    fig.savefig(this_path + suffix + 'mean_distances.pdf')
     fig.legend() 
+    fig.savefig(this_path + suffix + 'mean_distances.pdf')
     plt.close(fig)
 
 

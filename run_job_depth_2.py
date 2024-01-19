@@ -27,6 +27,7 @@ def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, project
     p_path = '{}/depth_analysis_{}/'.format(pp, constant)
     if normal_dist:
         p_path +=  'normal_std{}/'.format(str(scale))
+    p_path += 'bias_{}/'.format(bias)
 
     with open(p_path + 'activated_results.pkl', 'wb') as f:
         pickle.dump(result_list, f)

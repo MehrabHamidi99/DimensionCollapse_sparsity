@@ -152,7 +152,7 @@ class ParentNetwork(nn.Module, ABC):
         if self.additional_analysis:
           tmp_res = additional_analysis_for_full_data(full_data)
           eigenvalues_count = [tmp_res[0]]
-          dis_values = [tmp_res[1]]
+          dis_values = [np.array(tmp_res[1])]
           dis_stats = [tmp_res[2]]
       else:
         if self.extra_mode:
@@ -178,7 +178,7 @@ class ParentNetwork(nn.Module, ABC):
           plot_list_random_3d.append(layer.plot_list_random_3d)
         if self.additional_analysis:
           eigenvalues_count.append(layer.eigenvalues_count)
-          dis_values.append(layer.dis_values)
+          dis_values.append(np.array(layer.dis_values))
           dis_stats.append(layer.dis_stats)
         i += 1
       

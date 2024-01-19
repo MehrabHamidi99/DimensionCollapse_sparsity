@@ -185,16 +185,16 @@ def mnist_training_analysis(architecture, epochs=50, pre_path=''):
   test_x = test_loader.dataset.data.to(torch.float32).to(device).flatten(1)
 
   over_path = this_path + "untrained_"
-  whole_data_analysis_forward_pass(simple_model, 'train', over_path=over_path, dataset_here=train_x)
-  whole_data_analysis_forward_pass(simple_model, 'val', over_path=over_path, dataset_here=val_x)
-  whole_data_analysis_forward_pass(simple_model, 'test', over_path=over_path, dataset_here=test_x)
+  stable_mnist_analysis(simple_model, 'train', over_path=over_path, dataset_here=train_x, data_loader=train_loader, device=device)
+  stable_mnist_analysis(simple_model, 'val', over_path=over_path, dataset_here=val_x, data_loader=val_loader, device=device)
+  stable_mnist_analysis(simple_model, 'test', over_path=over_path, dataset_here=test_x, data_loader=test_loader, device=device)
 
   train_add, train_eig, val_add, val_eig = train_model(simple_model, train_loader, test_loader, base_path=this_path, train_x=train_x, val_x=val_x, val_loader=val_loader, epochs=epochs, loss='crossentropy')
 
   over_path = this_path + "trained_"
-  whole_data_analysis_forward_pass(simple_model, 'train', over_path=over_path, dataset_here=train_x)
-  whole_data_analysis_forward_pass(simple_model, 'val', over_path=over_path, dataset_here=val_x)
-  whole_data_analysis_forward_pass(simple_model, 'test', over_path=over_path, dataset_here=test_x)
+  stable_mnist_analysis(simple_model, 'train', over_path=over_path, dataset_here=train_x, data_loader=train_loader, device=device)
+  stable_mnist_analysis(simple_model, 'val', over_path=over_path, dataset_here=val_x, data_loader=val_loader, device=device)
+  stable_mnist_analysis(simple_model, 'test', over_path=over_path, dataset_here=test_x, data_loader=test_loader, device=device)
 
   # simple_model.to('cpu')
   animate_histogram(train_add, 'epoch ', save_path='epoch_visualization_train.gif', pre_path=this_path)

@@ -1,4 +1,6 @@
 import numpy as np
+from keras import initializations
+
 from keras.initializers import _compute_fans
 from tensorflow.python.ops.random_ops import random_normal
 from struct import unpack
