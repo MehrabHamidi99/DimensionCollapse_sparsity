@@ -48,7 +48,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   this_path = file_name_handling('random_data_random_untrained_network', architecture, num=num, exps=exps, pre_path=pre_path, 
-                                 normal_dist=normal_dist, loc=loc, scale=scale, bias=bias)
+                                 normal_dist=normal_dist, loc=loc, scale=scale, bias=bias, exp_type=exp_type)
       
   res_run1 = []
   # res_run2 = []
@@ -65,6 +65,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
     r1, count_num, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,
                                     exp_type=exp_type, constant=constant, eval=False)
+
     
     res_run1 += [r1]
     # eigens += [eigens]
@@ -86,9 +87,9 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
   animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=True, custom_range=1)
   if projection_analysis_bool:
-    projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
-    animate_histogram(distances, 'layers: ', x_axis_title='distance from origin distribution / mean', save_path='distance_distribution.gif', 
-                      pre_path=this_path, fixed_scale=True, custom_range=scale * 2.5, step=False)
+    projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path, costume_range=max(np.abs(scale * 2), 10, np.abs(loc * 2)))
+    animate_histogram(distances / max(1, np.mean(distances)), 'layers: ', x_axis_title='distance from origin distribution / mean', save_path='distance_distribution.gif', 
+                      pre_path=this_path, fixed_scale=True, custom_range=scale, step=False)
     if stats:
       plot_distances(net=net, distances=dis_stats, this_path=this_path)
 

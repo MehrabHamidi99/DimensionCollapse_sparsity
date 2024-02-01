@@ -9,7 +9,7 @@ def gaussian_hypersphere(D, N=1000, r=1, surface=True):
     N (int): Number of points to generate.
     D (int): Dimension of the hypersphere.
     r (float, optional): Radius of the hypersphere. Default is 1.
-    surface (bool, optional): If True, points will be on the surface of the hypersphere. Default is False.
+    surface (bool, optional): If True, points will be on the surface of the hypersphere. Default is True.
 
     Returns:
     numpy.ndarray: An array of shape (N, D) representing the points.
@@ -69,7 +69,7 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
             X = create_random_data_uniform(input_dimension, num)
 
     elif exp_type == 'fixed':
-        X = gaussian_hypersphere(input_dimension, num, r=constant)
+        X = gaussian_hypersphere(input_dimension, num, r=scale)
     else:
         raise Exception("Unknonw type data")
 
@@ -143,8 +143,9 @@ def create_full_random_data(input_dimension, output_dim=1, train_num=800, val_nu
            (X_normalized[-test_num:], y_normalized[-test_num:])
 
 def creat_mnist_data():
-    transform = transforms.Compose([transforms.ToTensor(),
-                                            transforms.Normalize((0.5,), (0.5,))])
+    transform = transforms.Compose([transforms.ToTensor()
+                                    # , transforms.Normalize((0.5,), (0.5,))
+                                    ])
     dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
     train_set, val_set = torch.utils.data.random_split(dataset, [50000, 10000])
 

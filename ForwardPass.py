@@ -49,12 +49,11 @@ def whole_data_analysis_forward_pass(model, mode, over_path, dataset_here, scale
         plotting_actions(additive_act, eigenvalues_count, dataset_here.shape[0], this_path, model)
         layer_activation_ratio = model.analysis_neurons_layer_wise_animation(additive_act, dataset_here.shape[0])
         animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
-        animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=True, custom_range=1)
-        projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path)
-        animate_histogram(distances, 'layers: ', x_axis_title='pairwise distances distribution / mean', save_path='distance_distribution.gif', pre_path=this_path, fixed_scale=True, custom_range=scale * 2.5, step=False)
+        animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=True, custom_range=2)
+        projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path, costume_range=100)
+        animate_histogram(distances / max(1, dis_stats[0][0]), 'layers: ', x_axis_title='pairwise distances distribution / mean', save_path='distance_distribution.gif', pre_path=this_path, fixed_scale=True, custom_range=scale * 2.5, step=False)
         plot_distances(net=model, distances=dis_stats, this_path=this_path)
 
     do_all(additive_act, eigenvalues_count, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats)
-    model.reset()
     return additive_act, eigenvalues_count, eigens
     

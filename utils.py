@@ -106,7 +106,7 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False):
+def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=30, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False):
     fig, ax = plt.subplots(figsize=(10, 10))
     def update(counter):
         ax.clear()
@@ -125,9 +125,10 @@ def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activat
             ax.set_title(title[counter])
         else:
             ax.set_title(f'{title} {counter + 1}')
+        ax.set_xlim(0, 1)
         if fixed_scale:
             ax.set_xlim(0, custom_range + 0.1)
-            plt.xticks(np.arange(0, custom_range + 0.1, step=0.2))
+            # plt.xticks(np.arange(0, custom_range + 0.1, step=0.2))
         ax.set_xlabel(x_axis_title)
         ax.set_ylabel('Frequency')
 
@@ -157,7 +158,7 @@ def get_pc_components(data, n_components=2):
     projected_data = np.dot(data, vectors)
     return projected_data[:, -1], projected_data[:, -2]
 
-def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path=''):
+def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=10):
     N_plots = len(anim_pieces)
     if dim == 3:
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection':'3d', 'aspect':'equal'}, figsize=(8,6))
@@ -189,10 +190,10 @@ def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers:
             ax.set_title(title[counter])
         else:
             ax.set_title(f'{title} {counter + 1}')
-        plt.ylim(-10, 10)
-        plt.xlim(-10, 10)
+        plt.ylim(-1 * costume_range * 5, costume_range * 5)
+        plt.xlim(-1 * costume_range * 5, costume_range * 5)
         if dim == 3:
-            ax.set_zlim(-10, 10)            
+            ax.set_zlim(-1 * costume_range * 5, costume_range * 5)      
 
     anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
     try:
@@ -250,12 +251,13 @@ def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvalues=False):
     near_zero_count = np.sum(np.abs(values) > threshold)
     return near_zero_count
 
-def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4):
+def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal'):
     if normal_dist:
-        pre_path += 'normal_std{}/'.format(str(scale))
+        pre_path += '{}_mean_{}_std{}/'.format(str(exp_type), str(loc), str(scale))
     else:
         pre_path += 'uniform/'
-    pre_path = pre_path + which + "/" + 'bias{}_exps{}_num{}_center{}'.format(str(bias), str(exps), str(num), str(loc))
+    pre_path += 'bias_{}/'.format(str(bias))
+    pre_path = pre_path + which + 'bias{}_exps{}_num{}_center_{}'.format(str(bias), str(exps), str(num), str(loc))
     this_path = pre_path + '_{}/'.format(str(architecture))
     if not os.path.isdir(this_path):
         try:
@@ -270,12 +272,14 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
 def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):
     # Activation plot
     fig, ax = plt.subplots(figsize=(10, 10))
-    tp = ax.hist(res1 / num, bins=20)
+    tp = ax.hist(res1 / num, bins=100)
     ax.set_xlabel('neuron activation percentage of a given dataset')
     ax.set_ylabel('neuron frequency')
     ax.set_title('#neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
     fig.savefig(this_path + suffix + 'additive_activations.pdf')
+    plt.xlim(0, 1)
     plt.close(fig)
+    
 
     # Eigenvalue plots:
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -311,8 +315,8 @@ def projection_analysis_for_full_data(this_data, return_eigenvalues):
     res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=return_eigenvalues)
     return res_list[1], projection_analysis(this_data, 'pca', 2), projection_analysis(this_data, 'pca', 3), projection_analysis(this_data, 'random', 2), projection_analysis(this_data, 'random', 3) 
 
-def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path):
-    plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path)
-    plot_data_projection(list_pca_3d, type_analysis='pca', dim=3, save_path='data_pca_3d.gif', pre_path=pre_path)
-    plot_data_projection(list_random_2d, type_analysis='random', dim=2, save_path='data_random_2d.gif', pre_path=pre_path)
-    plot_data_projection(list_random_3d, type_analysis='random', dim=3, save_path='data_random_3d.gif', pre_path=pre_path)
+def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path, costume_range=10):
+    plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path, costume_range=costume_range)
+    plot_data_projection(list_pca_3d, type_analysis='pca', dim=3, save_path='data_pca_3d.gif', pre_path=pre_path, costume_range=costume_range)
+    plot_data_projection(list_random_2d, type_analysis='random', dim=2, save_path='data_random_2d.gif', pre_path=pre_path, costume_range=costume_range)
+    plot_data_projection(list_random_3d, type_analysis='random', dim=3, save_path='data_random_3d.gif', pre_path=pre_path, costume_range=costume_range)

@@ -97,28 +97,37 @@ def train_model(model, train_loader, test_loader, base_path, train_x, val_x, val
             val_eig += [eigens]
 
         val_loss /= len(val_loader.dataset)
-        print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Accuracy: {100. * correct / len(val_loader.dataset):.2f}%')
 
         torch.save(model.state_dict(), over_path + "model")
+        f = open(over_path + "res.txt", "a")
+        f.write(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Accuracy: {100. * correct / len(val_loader.dataset):.2f}%')
+        f.close()
+    
+    print("Training Complete")
 
+    f = open(base_path + "res.txt", "a")
     # over_path = base_path
     model.eval()
-    test_loss = 0
-    correct = 0
-    with torch.no_grad():
-        # model.not_extra()
-        model.reset()
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            test_loss += criterion(output, target).item()
-            pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
-        
-        # additive_act, eigenvalues_count = whole_data_analysis_forward_pass(model, 'test', base_path, test_x)
 
-    test_loss /= len(test_loader.dataset)
-    print(f'test loss: {test_loss:.4f}, Accuracy: {100. * correct / len(test_loader.dataset):.2f}%')
-    print("Training Complete")
+    def print_stats(loader, mode):
+        loss = 0
+        correct = 0
+        with torch.no_grad():
+            # model.not_extra()
+            model.reset()
+            for data, target in loader:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                loss += criterion(output, target).item()
+                pred = output.argmax(dim=1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
+
+        loss /= len(test_loader.dataset)
+        f.write(f'{mode} loss: {loss:.4f}, Accuracy: {100. * correct / len(loader.dataset):.2f}%\n')
+    
+    print_stats(train_loader, 'train')
+    print_stats(val_loader, 'val')
+    print_stats(test_loader, 'test')
+    f.close()
 
     return train_add, train_eig, val_add, val_eig
