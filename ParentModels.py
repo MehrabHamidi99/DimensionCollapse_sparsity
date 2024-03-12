@@ -17,11 +17,11 @@ class CustomLinearWithActivation(nn.Linear):
         self.non_zero = 0
         if self.additional_analysis:
           self.eigenvalues_count = []
+          self.eigenvalues = []
           self.dis_values = []
           self.dis_stats = []
 
         if self.extra:
-          self.eigenvalues = []
           self.plot_list_pca_2d = []
           self.plot_list_pca_3d = []
           self.plot_list_random_2d = []
@@ -37,8 +37,54 @@ class CustomLinearWithActivation(nn.Linear):
         if self.extra:
           self.eigenvalues, self.plot_list_pca_2d, self.plot_list_pca_3d, self.plot_list_random_2d, self.plot_list_random_3d = projection_analysis_for_full_data(deteached_version, True)
         if self.additional_analysis:
-          self.eigenvalues_count, self.dis_values, self.dis_stats = additional_analysis_for_full_data(deteached_version)
+          self.eigenvalues_count, self.eigenvalues, self.dis_values, self.dis_stats = additional_analysis_for_full_data(deteached_version)
         return output
+    
+
+class ResidualBuildingBlock(nn.Linear):
+    def __init__(self, in_features, out_features, activation, bias=True, additional_analysis=True):
+        super(ResidualBuildingBlock, self).__init__(in_features, out_features, bias)
+        self.activation = activation
+        self.additional_analysis = additional_analysis
+        self.extra = False
+        self.reinitialize_storing_values()
+
+        self.residual_value = 0
+        self.out_res_layer = None
+        
+    def reinitialize_storing_values(self):
+        self.non_zero = 0
+        if self.additional_analysis:
+          self.eigenvalues_count = []
+          self.eigenvalues = []
+          self.dis_values = []
+          self.dis_stats = []
+
+        if self.extra:
+          self.plot_list_pca_2d = []
+          self.plot_list_pca_3d = []
+          self.plot_list_random_2d = []
+          self.plot_list_random_3d = []
+
+    def forward(self, input):
+        x = input + self.residual_value
+        output = super(ResidualBuildingBlock, self).forward(x)
+        output = self.activation(output)
+
+        deteached_version = output.cpu().clone().detach().numpy()
+        self.non_zero += np.sum((deteached_version > 0), axis=0)
+        if self.extra:
+          self.eigenvalues, self.plot_list_pca_2d, self.plot_list_pca_3d, self.plot_list_random_2d, self.plot_list_random_3d = projection_analysis_for_full_data(deteached_version, True)
+        if self.additional_analysis:
+          self.eigenvalues_count, self.eigenvalues, self.dis_values, self.dis_stats = additional_analysis_for_full_data(deteached_version)
+        
+        self.residual_value = 0
+        if self.out_res_layer is not None:
+          self.out_res_layer.residual_value += output
+        # for layer in self.out_set:
+        #    layer.residual_value += output
+        return output
+
 
 class ParentNetwork(nn.Module, ABC):
     '''
@@ -65,25 +111,27 @@ class ParentNetwork(nn.Module, ABC):
     output = model(torch.randn(10))
 
     '''
-    def __init__(self, n_in, layer_list, bias=1e-3, additional_analysis=True):
+    def __init__(self, n_in, layer_list, bias=1e-3, additional_analysis=True, create_layer_list=True):
       super(ParentNetwork, self).__init__()
+      self.additional_analysis = additional_analysis
 
       self.BIAS = bias
+      if create_layer_list:
+        self.layer_list = np.array([0] + layer_list)
+        self.layers = nn.Sequential()
+        i = 0
+        self.layers.add_module(f"linear_{i}", CustomLinearWithActivation(n_in, layer_list[i], nn.ReLU(), additional_analysis=additional_analysis))
+        for i in range(1, len(layer_list)):
+            self.layers.add_module(f"linear_{i}", CustomLinearWithActivation(layer_list[i - 1], layer_list[i], nn.ReLU(), additional_analysis=additional_analysis))
+        self.setup(layer_list=layer_list)
 
-      self.layer_list = np.array([0] + layer_list)
-      self.layers = nn.Sequential()
-      i = 0
-      self.layers.add_module(f"linear_{i}", CustomLinearWithActivation(n_in, layer_list[i], nn.ReLU(), additional_analysis=additional_analysis))
-      for i in range(1, len(layer_list)):
-          self.layers.add_module(f"linear_{i}", CustomLinearWithActivation(layer_list[i - 1], layer_list[i], nn.ReLU(), additional_analysis=additional_analysis))
+
+    def setup(self, layer_list):
       self.apply(self.init_weights)
       self.output_dim = layer_list[-1]
       # This is an array showing each neuron is activated for how many datapoints before reseting.
       self.additive_activations = np.zeros(np.sum(layer_list))
-      self.additional_analysis = additional_analysis
-
       self.extra_mode = False
-
       self.change_key = True
       
     def get_layer_list(self):
@@ -150,7 +198,6 @@ class ParentNetwork(nn.Module, ABC):
             full_data = full_data.cpu().clone().detach().numpy()
         if self.extra_mode:
           tmp_res = projection_analysis_for_full_data(full_data, True)
-          eigenvalues = [tmp_res[0]]
           plot_list_pca_2d = [tmp_res[1]]
           plot_list_pca_3d = [tmp_res[2]]
           plot_list_random_2d = [tmp_res[3]]
@@ -158,16 +205,17 @@ class ParentNetwork(nn.Module, ABC):
         if self.additional_analysis:
           tmp_res = additional_analysis_for_full_data(full_data)
           eigenvalues_count = [tmp_res[0]]
-          dis_values = [np.array(tmp_res[1])]
-          dis_stats = [tmp_res[2]]
+          eigenvalues = [tmp_res[1]]
+          dis_values = [np.array(tmp_res[2])]
+          dis_stats = [tmp_res[3]]
       else:
         if self.extra_mode:
-          eigenvalues = []
           plot_list_pca_2d = []
           plot_list_pca_3d = []
           plot_list_random_2d = []
           plot_list_random_3d = []   
         if self.additional_analysis:
+          eigenvalues = []
           eigenvalues_count = []
           dis_values = []
           dis_stats = []
@@ -177,13 +225,13 @@ class ParentNetwork(nn.Module, ABC):
       for layer in self.layers:
         self.additive_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = layer.non_zero
         if self.extra_mode:
-          eigenvalues.append(layer.eigenvalues)
           plot_list_pca_2d.append(layer.plot_list_pca_2d)
           plot_list_pca_3d.append(layer.plot_list_pca_3d)
           plot_list_random_2d.append(layer.plot_list_random_2d)
           plot_list_random_3d.append(layer.plot_list_random_3d)
         if self.additional_analysis:
           eigenvalues_count.append(layer.eigenvalues_count)
+          eigenvalues.append(layer.eigenvalues)
           dis_values.append(np.array(layer.dis_values))
           dis_stats.append(layer.dis_stats)
         i += 1
@@ -193,7 +241,7 @@ class ParentNetwork(nn.Module, ABC):
       if self.extra_mode:
         return self.additive_activations, eigenvalues_count, eigenvalues, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d, np.array(dis_values), dis_stats
       if self.additional_analysis:
-        return self.additive_activations, eigenvalues_count, np.array(dis_values, dtype=object), dis_stats
+        return self.additive_activations, eigenvalues_count, eigenvalues, np.array(dis_values, dtype=object), dis_stats
       else:
         return self.additive_activations
       

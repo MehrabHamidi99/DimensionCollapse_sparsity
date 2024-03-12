@@ -5,6 +5,8 @@ import os
 from functools import partial
 import pickle
 import argparse
+from utils import *
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -17,14 +19,17 @@ def str2bool(v):
 
 def run_the_whole_thing(archs, normal_dist, scale, constant, parser, pp, projection_analysis_bool):
     pool = multiprocessing.Pool(processes=40)
-    prod_x=partial(one_random_experiment, exps=20, num=5000, one=False, pre_path='{}/depth_analysis_{}/'.format(pp, constant), 
+    pre_path_here = '{}/depth_analysis_{}/'.format(pp, constant)
+    prod_x=partial(one_random_experiment, exps=20, num=5000, one=False, pre_path=pre_path_here, 
                    normal_dist=parser.normal_dist, loc=0, scale=parser.scale, exp_type=parser.exp_type, 
                    projection_analysis_bool=projection_analysis_bool)
     result_list = pool.map(prod_x, archs)
 
-    p_path = '{}/depth_analysis_{}/'.format(pp, constant)
-    if normal_dist:
-        p_path +=  'normal_std{}/'.format(str(scale))
+    p_path = file_name_handling(which=None, architecture=None, num=num, exps=exps, pre_path=pre_path_here, normal_dist=normal_dist, loc=0, scale=scale, bias=1e-4, exp_type='normal', model_type='mlp', return_pre_path=True)
+
+    # p_path = '{}/depth_analysis_{}/'.format(pp, constant)
+    # if normal_dist:
+    #     p_path +=  'normal_std{}/'.format(str(scale))
 
     with open(p_path + 'activated_results.pkl', 'wb') as f:
         pickle.dump(result_list, f)
@@ -53,7 +58,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     constant = args.constant
     print(args)
-    archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 1)]
+    # archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, min(constant * 10, 120), 1)]
+    archs1 = [(constant, [constant for _ in range(i)]) for i in [10, 20, 50, 100,]]
+
     starttime = time.time()
     pp = 'results_find_starting_point/constant_{}'.format(str(constant))
     # prod1=partial(regul)

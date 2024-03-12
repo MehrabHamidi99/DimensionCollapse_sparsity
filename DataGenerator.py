@@ -15,9 +15,6 @@ def gaussian_hypersphere(D, N=1000, r=1, surface=True):
     numpy.ndarray: An array of shape (N, D) representing the points.
     """
 
-    # Set seed for reproducibility
-    np.random.seed(1)
-
     # Sample D vectors of N Gaussian coordinates
     samples = np.random.randn(N, D)
 
@@ -31,6 +28,22 @@ def gaussian_hypersphere(D, N=1000, r=1, surface=True):
         samples = samples * new_radii[:, np.newaxis]
 
     return samples * r
+
+
+
+def points_on_a_line(D, N=1000, loc=0, scale=1, d2d=False):
+    samples = np.random.normal(loc=loc, scale=scale, size=(N, D))
+    m = np.random.rand(1, D - 1)
+    b = np.random.rand(1, 1)
+    if d2d:
+        m = np.random.rand(1, 1)
+        b = np.random.rand(1, 1)
+        samples[:, 1] = (np.dot(samples[:, 0], m.T) + b).flatten()
+        samples[:, 2:] = 0
+    else:
+        samples[:, -1] = (np.dot(samples[:, :-1], m.T) + b).flatten()
+
+    return samples
 
 
 
@@ -70,6 +83,12 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
 
     elif exp_type == 'fixed':
         X = gaussian_hypersphere(input_dimension, num, r=scale)
+        
+    elif exp_type == 'line':
+        X = points_on_a_line(input_dimension, num, scale=scale)
+    
+    elif exp_type == 'line_d':
+        X = points_on_a_line(input_dimension, num, scale=scale, d2d=False)
     else:
         raise Exception("Unknonw type data")
 

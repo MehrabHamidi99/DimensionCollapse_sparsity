@@ -106,45 +106,33 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-def animate_histogram(activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=30, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False):
-    fig, ax = plt.subplots(figsize=(10, 10))
-    def update(counter):
-        ax.clear()
-        if pd.isna(activation_data[counter]).any():
-            if step:
-                ax.hist(np.nan_to_num(activation_data[counter], nan=0).flatten(), bins=bins, histtype='step')
-            else:
-                ax.hist(np.nan_to_num(activation_data[counter], nan=0).flatten(), bins=bins)
+def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=30, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False, zero_one=True, eigens=False):
+    ax.clear()
+    new_act = activation_data[counter]
+    if eigens:
+        new_act = new_act[new_act < 1000]
+    if pd.isna(activation_data[counter]).any():
+        if step:
+            ax.hist(np.nan_to_num(new_act, nan=0), bins=bins, histtype='step')
         else:
-            if step:
-                ax.hist(activation_data[counter].flatten(), bins=bins, histtype='step')
-            else:
-                ax.hist(np.nan_to_num(activation_data[counter], nan=0).flatten(), bins=bins)
+            ax.hist(np.nan_to_num(new_act, nan=0).flatten(), bins=bins)
+    else:
+        if step:
+            ax.hist(new_act.flatten(), bins=bins, histtype='step')
+        else:
+            ax.hist(np.nan_to_num(new_act, nan=0).flatten(), bins=bins)
 
-        if type(title) is list:
-            ax.set_title(title[counter])
-        else:
-            ax.set_title(f'{title} {counter + 1}')
+    if type(title) is list:
+        ax.set_title(title[counter])
+    else:
+        ax.set_title(f'{title} {counter + 1}')
+    if zero_one:
         ax.set_xlim(0, 1)
-        if fixed_scale:
-            ax.set_xlim(0, custom_range + 0.1)
-            # plt.xticks(np.arange(0, custom_range + 0.1, step=0.2))
-        ax.set_xlabel(x_axis_title)
-        ax.set_ylabel('Frequency')
-
-    anim = FuncAnimation(fig, update, frames=len(activation_data), repeat=False)
-
-    try:
-        anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
-    except RuntimeError:
-        # print("Imagemagick writer not found. Falling back to Pillow writer.")
-        try:
-            anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
-        except Exception:
-            # anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
-            pass
-    plt.close(fig)
-    return anim
+    if fixed_scale:
+        ax.set_xlim(0, custom_range + 0.1)
+        # plt.xticks(np.arange(0, custom_range + 0.1, step=0.2))
+    ax.set_xlabel(x_axis_title)
+    ax.set_ylabel('Frequency')
 
 def get_pc_components(data, n_components=2):
     covar_matrix = np.matmul(data.T , data)
@@ -158,57 +146,72 @@ def get_pc_components(data, n_components=2):
     projected_data = np.dot(data, vectors)
     return projected_data[:, -1], projected_data[:, -2]
 
-def plot_data_projection(anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=10):
-    N_plots = len(anim_pieces)
-    if dim == 3:
-        fig, ax = plt.subplots(1, 1, subplot_kw={'projection':'3d', 'aspect':'equal'}, figsize=(8,6))
-    elif dim == 2:
-        fig, ax = plt.subplots(figsize=(10, 10))
-    
-    def update(counter):
-        ax.clear()
-        ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], s=10)
+def plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, this_path, costume_range, pre_path, scale):
 
-        if type_analysis == 'pca':
-            plt.xlabel('First Principal Component')
-            plt.ylabel('Second Principal Component')
-            if dim == 2:
-                plt.title('Data in First Two Principal Components')
-            if dim == 3:
-                ax.set_zlabel('Third Principal Component')
-                plt.title('Data in First Three Principal Components')
-        elif type_analysis == 'random':
-            plt.xlabel('First Random Diemnsion')
-            plt.ylabel('Second Random Dimension')
-            plt.title('Data in Two Random Dimension')
-            if dim == 2:
-                plt.title('Data in Two Random Dimension')
-            if dim == 3:
-                ax.set_zlabel('Third Random Dimension')
-                plt.title('Data in Three Random Dimension')
-        if type(title) is list:
-            ax.set_title(title[counter])
-        else:
-            ax.set_title(f'{title} {counter + 1}')
-        plt.ylim(-1 * costume_range * 5, costume_range * 5)
-        plt.xlim(-1 * costume_range * 5, costume_range * 5)
-        if dim == 3:
-            ax.set_zlim(-1 * costume_range * 5, costume_range * 5)      
+    fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
 
-    anim = FuncAnimation(fig, update, frames=N_plots, repeat=False)
+    def update(frame):
+
+        animate_histogram(axs[0, 0], frame, layer_activation_ratio, 'layer ')
+        animate_histogram(axs[0, 1], frame, eigens, 'layers: ', x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
+        animate_histogram(axs[0, 2], frame, dist_all / max(1, np.mean(dist_all)), 'layers: ', x_axis_title='distance from origin distribution / mean', fixed_scale=True, custom_range=scale, step=False)
+
+        plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=costume_range)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=costume_range)
+
+        axs[1, 2].remove()
+        axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
+        plot_data_projection(axs[1, 2], frame, list_pca_3d, type_analysis='pca', dim=3, costume_range=costume_range)
+        axs[1, 3].remove()
+        axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
+        plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=costume_range)
+
+    # Create animation
+    anim = FuncAnimation(fig, update, frames=len(layer_activation_ratio), repeat=False)
+
+    # Save the animation
+    plt.grid(True)
     try:
-        anim.save(pre_path + name_fig + save_path, writer='imagemagick', fps=fps)
+        anim.save(pre_path + "all_gifa.gif", writer='imagemagick', fps=1)
     except RuntimeError:
         # print("Imagemagick writer not found. Falling back to Pillow writer.")
         try:
-            anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
+            anim.save(pre_path + "all_gifa.gif", writer=PillowWriter(fps=1))
         except Exception:
             # anim.save(pre_path + name_fig + save_path, writer=PillowWriter(fps=fps))
             pass
+    plt.close()  # Close the plot to prevent it from displaying statically
 
-    plt.grid(True)
-    plt.close(fig)
-    return anim
+
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=10):
+    ax.clear()
+    ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], s=10)
+
+    if type_analysis == 'pca':
+        ax.set_xlabel('First Principal Component')
+        ax.set_ylabel('Second Principal Component')
+        if dim == 2:
+            ax.set_title('Data in First Two Principal Components')
+        if dim == 3:
+            ax.set_zlabel('Third Principal Component')
+            ax.set_title('Data in First Three Principal Components')
+    elif type_analysis == 'random':
+        ax.set_xlabel('First Random Diemnsion')
+        ax.set_ylabel('Second Random Dimension')
+        ax.set_title('Data in Two Random Dimension')
+        if dim == 2:
+            ax.set_title('Data in Two Random Dimension')
+        if dim == 3:
+            ax.set_zlabel('Third Random Dimension')
+            ax.set_title('Data in Three Random Dimension')
+    if type(title) is list:
+        ax.set_title(title[counter])
+    else:
+        ax.set_title(f'{title} {counter + 1}')
+    ax.set_ylim(-1 * costume_range * 5, costume_range * 5)
+    ax.set_xlim(-1 * costume_range * 5, costume_range * 5)
+    if dim == 3:
+        ax.set_zlim(-1 * costume_range * 5, costume_range * 5)
         
 def projection_analysis(data, type_anal, dim):
     if data.shape[1] == 2:
@@ -245,19 +248,22 @@ def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvalues=False):
         values, vectors = eigh(covar_matrix, eigvals_only=False)
 
         near_zero_count = np.sum(np.abs(values) > threshold)
-        return near_zero_count, vectors
+        return near_zero_count, values
     
     values = eigh(covar_matrix, eigvals_only=True)
     near_zero_count = np.sum(np.abs(values) > threshold)
-    return near_zero_count
+    return near_zero_count, values
 
-def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal'):
+def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal', model_type='mlp', return_pre_path=False):
     if normal_dist:
         pre_path += '{}_mean_{}_std{}/'.format(str(exp_type), str(loc), str(scale))
     else:
         pre_path += 'uniform/'
     pre_path += 'bias_{}/'.format(str(bias))
+    if return_pre_path:
+        return pre_path
     pre_path = pre_path + which + 'bias{}_exps{}_num{}_center_{}'.format(str(bias), str(exps), str(num), str(loc))
+    pre_path = pre_path + '_{}'.format(model_type)
     this_path = pre_path + '_{}/'.format(str(architecture))
     if not os.path.isdir(this_path):
         try:
@@ -269,39 +275,40 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
     print(this_path)
     return this_path
 
-def plotting_actions(res1, eigen_count, num, this_path, net, suffix=''):
+def plotting_actions(res1, eigen_count, num, this_path, net, distances, suffix=''):
     # Activation plot
-    fig, ax = plt.subplots(figsize=(10, 10))
-    tp = ax.hist(res1 / num, bins=100)
-    ax.set_xlabel('neuron activation percentage of a given dataset')
-    ax.set_ylabel('neuron frequency')
-    ax.set_title('#neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
-    fig.savefig(this_path + suffix + 'additive_activations.pdf')
-    plt.xlim(0, 1)
-    plt.close(fig)
+    fig, ax = plt.subplots(2, 2, figsize=(20, 20))
+    tp = ax[0, 0].hist(res1 / num, bins=100)
+    ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
+    ax[0, 0].set_ylabel('neuron frequency')
+    ax[0, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
+    # fig.savefig(this_path + suffix + 'additive_activations.pdf')
+    # plt.xlim(0, 1)
+    # plt.close(fig)
     
 
     # Eigenvalue plots:
-    fig, ax = plt.subplots(figsize=(10, 10))
-    tp = ax.bar(np.arange(len(eigen_count)), eigen_count)
-    ax.set_ylabel('number of non-zero eigenvalues')
-    ax.set_xlabel('layers')
-    ax.set_title('Non-zero eigenvalues for network with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
-    fig.savefig(this_path + suffix + 'non_zero_eigenvalues.pdf')
-    plt.close(fig)
+    # fig, ax = plt.subplots(figsize=(7, 7))
+    tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
+    ax[0, 1].set_ylabel('number of non-zero eigenvalues')
+    ax[0, 1].set_xlabel('layers')
+    ax[0, 1].set_title('Non-zero eigenvalues for network with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
+    # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.pdf')
+    # plt.close(fig)
 
-def plot_distances(net, distances, this_path, suffix=''):
-    fig, ax = plt.subplots(figsize=(10, 10))
+# def plot_distances(net, distances, this_path, suffix=''):
+    # fig, ax = plt.subplots(figsize=(7, 7))
     X_axis = np.arange(len(distances))
     dis_stat = np.array(distances)
-    plt.bar(X_axis - 0.2, dis_stat[:, 0], 0.2, label = 'Mean')
-    plt.bar(X_axis + 0.0, dis_stat[:, 1], 0.2, label = 'Max')
+    ax[1, 0].bar(X_axis - 0.2, dis_stat[:, 0], 0.2, label = 'Mean')
+    ax[1, 0].bar(X_axis + 0.0, dis_stat[:, 1], 0.2, label = 'Max')
     # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
-    ax.set_ylabel('mean distances from origin')
-    ax.set_xlabel('layers')
-    ax.set_title('mean distances from origin per layer with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
-    fig.legend() 
-    fig.savefig(this_path + suffix + 'mean_distances.pdf')
+    ax[1, 0].set_ylabel('mean distances from origin')
+    ax[1, 0].set_xlabel('layers')
+    ax[1, 0].set_title('mean distances from origin per layer with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
+    ax[1, 0].legend()
+    
+    fig.savefig(this_path + suffix + 'all_plots.pdf')
     plt.close(fig)
 
 
@@ -309,10 +316,10 @@ def additional_analysis_for_full_data(this_data):
     res = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
     # cdist(this_data, np.array([np.zeros(this_data.shape[1])]))
     distances_this_data = distance_from_origin(this_data)
-    return res, distances_this_data, [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
+    return res[0], res[1], distances_this_data, [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
 
 def projection_analysis_for_full_data(this_data, return_eigenvalues):
-    res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=return_eigenvalues)
+    res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
     return res_list[1], projection_analysis(this_data, 'pca', 2), projection_analysis(this_data, 'pca', 3), projection_analysis(this_data, 'random', 2), projection_analysis(this_data, 'random', 3) 
 
 def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path, costume_range=10):

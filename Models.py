@@ -43,53 +43,77 @@ class MLP_ReLU(ParentNetwork):
         output = self.layers(x)
         return output
 
-class ResNet_arch(nn.Module):
-   
-  def __init__(self, n_in, layer_list):
-      super(ResNet_arch, self).__init__(n_in, layer_list)
 
-      # Residual connection
-      if self.input_dim != self.output_dim:
-          self.residual_layer = nn.Linear(n_in, self.output_dim)
-      else:
-          self.residual_layer = None
+class ResNet_one_skip_connection(ParentNetwork):
+    '''
+    This class implements a multi-layer perceptron (MLP) with ReLU (Rectified Linear Unit) activations. 
+    It is designed for flexibility in defining the network architecture 
+    through a specified number of input dimensions and a list of layer sizes.
+    '''
 
-  def forward(self, x, return_pre_activations=False, return_activation_values=False, single_point=False):
-      first_layer_result = self.first_layer(x)
-      output = self.hidden_layers(first_layer_result)
-      i = 0
-
-      if return_pre_activations:
-        new_pre_activation = self.first_layer(x)
-        # Apply ReLU activation to the first layer output
-        new_activation = nn.ReLU()(new_pre_activation)
-
-        if return_activation_values:
-          pre_activations = [new_pre_activation]
-          activations = [new_activation]
-
+    def __init__(self, n_in, layer_list, bias=1e-4):
+        super(ResNet_one_skip_connection, self).__init__(n_in, layer_list, bias=bias)
+        self.layer_list = np.array([0] + layer_list)
+        self.middle_layers = nn.Sequential()
         i = 0
-        self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).numpy()
+        self.first_layer = CustomLinearWithActivation(n_in, layer_list[i], nn.ReLU(), additional_analysis=True)
+        for i in range(1, len(layer_list) - 1):
+            self.middle_layers.add_module(f"linear_{i}", CustomLinearWithActivation(layer_list[i - 1], layer_list[i], nn.ReLU(), additional_analysis=True))
         i += 1
+        self.last_layer = CustomLinearWithActivation(layer_list[i - 1], layer_list[i], nn.ReLU(), additional_analysis=True)
+        self.setup(layer_list=layer_list)
 
-        # Process hidden layers
-        for layer in self.hidden_layers:
-            new_pre_activation = layer(new_activation)
-            # Apply ReLU, except for the output layer
-            new_activation = nn.ReLU()(new_pre_activation)
+        self.layers = nn.Sequential()
+        self.layers.add_module(f"linear_{0}", self.first_layer)
+        i = 0
+        for layer in self.middle_layers:
+           self.layers.add_module(f"hidden_{i}", layer)
+           i += 1
+        self.layers.add_module(f"linear_{i}", self.last_layer)
 
-            if return_activation_values:
-              pre_activations.append(new_pre_activation)
-              activations.append(new_activation)
+        self.setup(layer_list=layer_list)
 
-            self.neurons_activations[np.sum(self.layer_list[:i + 1]): np.sum(self.layer_list[:i + 1]) + self.layer_list[i + 1]] = (new_activation.clone().detach() > 0).numpy()
-            i += 1
-            ########## TEST the whole procedure later
-        if not single_point:
-              self.additive_activations += self.neurons_activations
-              self.reset_neurons_activation()
-        if return_activation_values:
-          return output, pre_activations, activations
+    def forward(self, x):
+        '''
+        Performs a forward pass of the network.
+
+        Parameters:
+        x (Tensor): Input tensor.
+        return_pre_activations (bool): If True, returns pre-activation values.
+        return_activation_values (bool): If True, returns activation values.
+        single_point (bool): Flag used for single data point processing.
+
+        Returns:
+        Output of the network, and optionally, pre-activations and activations.
+        '''
+        self.change_key = False
+        out1 = self.first_layer(x)
+        out2 = self.middle_layers(out1)
+        output = self.last_layer(out2 + x)
+        return output
+
+class ResNet_arch(ParentNetwork):
+   
+  def __init__(self, n_in, layer_list, bias=1e-4):
+    super(ResNet_arch, self).__init__(n_in, layer_list, bias=bias)
+
+    self.layer_list = np.array([0] + layer_list)
+    self.layers = nn.Sequential()
+    i = 0
+    this_layer = ResidualBuildingBlock(n_in, layer_list[i], nn.ReLU())
+    cur_layer = this_layer
+    self.layers.add_module(f"linear_{i}", this_layer)
+    for i in range(1, len(layer_list)):
+        this_layer = ResidualBuildingBlock(layer_list[i - 1], layer_list[i], nn.ReLU())
+        if i % 3 == 0:
+           cur_layer.out_res_layer = this_layer
+        self.layers.add_module(f"linear_{i}", this_layer)
+        cur_layer = this_layer
+    self.setup(layer_list=layer_list)
+
+  def forward(self, x):
+      self.change_key = False
+      output = self.layers(x)
       return output
      
      

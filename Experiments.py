@@ -27,7 +27,7 @@ def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=
 
   
 def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, 
-                          loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True, bias=1e-4):
+                          loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True, bias=1e-4, model_type='mlp'):
   '''
     Parameters
     architecture (tuple): A tuple where the first element is the number of input features, and the second element is a list of layer sizes for the network.
@@ -48,50 +48,55 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   this_path = file_name_handling('random_data_random_untrained_network', architecture, num=num, exps=exps, pre_path=pre_path, 
-                                 normal_dist=normal_dist, loc=loc, scale=scale, bias=bias, exp_type=exp_type)
+                                 normal_dist=normal_dist, loc=loc, scale=scale, bias=bias, exp_type=exp_type, model_type=model_type)
       
   res_run1 = []
   # res_run2 = []
-  # eigens = []
+  eigens = []
   eigen_count = []
   # dist_all = np.zeros((len(architecture[1]) + 1, int(num * (num - 1) / 2)))
   dist_all = np.zeros((len(architecture[1]) + 1, num))
 
   dist_stats = []
 
-  net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+  if model_type == 'mlp':
+    net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+  else:
+    net = ResNet_arch(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+
   net.to(device)
-  for i in range(exps):
-    r1, count_num, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
+  for i in tqdm(range(exps)):
+    r1, count_num, eigen, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,
                                     exp_type=exp_type, constant=constant, eval=False)
-
-    
     res_run1 += [r1]
-    # eigens += [eigens]
+    eigens += [eigen]
     eigen_count += [count_num]
     dist_all = (dist_all + dists) / 2.0
     dist_stats += [dist_stats_this]
     net.reset()
-  
-  _, _, eigens, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, distances, dis_stats = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
-                                    normal_dist=normal_dist, loc=loc, scale=scale,
-                                    exp_type=exp_type, constant=constant, eval=True)
-
+    
   res1 = np.array(res_run1).mean(axis=0)
   eigen_count = np.array(eigen_count).mean(axis=0)
+  eigens = np.array(eigens).mean(axis=0)
   dis_stats = np.array(dist_stats).mean(axis=0)
 
-  plotting_actions(res1, eigen_count, num, this_path, net)
+  plotting_actions(res1, eigen_count, num, this_path, net, dis_stats)
+  # plot_distances(net=net, distances=dis_stats, this_path=this_path)
+
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
-  animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
-  animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=True, custom_range=1)
-  if projection_analysis_bool:
-    projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path, costume_range=max(np.abs(scale * 2), 10, np.abs(loc * 2)))
-    animate_histogram(distances / max(1, np.mean(distances)), 'layers: ', x_axis_title='distance from origin distribution / mean', save_path='distance_distribution.gif', 
-                      pre_path=this_path, fixed_scale=True, custom_range=scale, step=False)
-    if stats:
-      plot_distances(net=net, distances=dis_stats, this_path=this_path)
+  # if projection_analysis_bool:
+  _, _, _, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, _, _ = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
+                                normal_dist=normal_dist, loc=loc, scale=scale,
+                                exp_type=exp_type, constant=constant, eval=True)
+    # projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path, costume_range=max(np.abs(scale * 2), 10, int(np.abs(loc / 2))))
+    # animate_histogram(dist_all / max(1, np.mean(dist_all)), 'layers: ', x_axis_title='distance from origin distribution / mean', save_path='distance_distribution.gif', 
+    #                   pre_path=this_path, fixed_scale=True, custom_range=scale, step=False)
+  
+    # animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
+    # animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
+  plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, this_path, costume_range=max(np.abs(scale * 2), 10, int(np.abs(loc / 2))), pre_path=this_path, scale=scale)
+  
 
   if return_sth:
     return res1, net
