@@ -19,7 +19,8 @@ def gaussian_hypersphere(D, N=1000, r=1, surface=True):
     samples = np.random.randn(N, D)
 
     # Normalize all distances (radii) to 1
-    radii = np.linalg.norm(samples, axis=1)
+    # radii = np.linalg.norm(samples, axis=1)
+    radii = np.sqrt(np.einsum('...i,...i', samples, samples))
     samples = samples / radii[:, np.newaxis]
 
     # Sample N radii with exponential distribution (unless points are to be on the surface)
@@ -29,16 +30,44 @@ def gaussian_hypersphere(D, N=1000, r=1, surface=True):
 
     return samples * r
 
+def create_2d_plane_samples(d, N=1000, loc=0, scale=1):
+    """
+    Sample points on a 2D plane in a D-dimensional space.
 
+    Parameters:
+    - d (int): Dimensionality of the space.
+    - n_samples (int): Number of points to sample on the plane.
+    - origin (np.array): A point on the plane (D-dimensional).
+    - basis_vector_1 (np.array): First basis vector defining the plane (D-dimensional).
+    - basis_vector_2 (np.array): Second basis vector defining the plane (D-dimensional).
 
-def points_on_a_line(D, N=1000, loc=0, scale=1, d2d=False):
+    Returns:
+    - np.array: Array of points sampled from the plane (n_samples x d).
+    """
+    origin = np.zeros(d)  # Origin point on the plane
+    basis_vector_1 = np.random.rand(d)  # First basis vector
+    basis_vector_1 /= np.linalg.norm(basis_vector_1)  # Normalize
+    basis_vector_2 = np.random.rand(d)  # Second basis vector orthogonal to the first
+    basis_vector_2 -= basis_vector_2.dot(basis_vector_1) * basis_vector_1  # Make orthogonal
+    basis_vector_2 /= np.linalg.norm(basis_vector_2)  # Normalize
+    
+    # Sample scalar coefficients for the linear combinations
+    coefficients_1 = np.random.normal(loc, scale, N)
+    coefficients_2 = np.random.normal(loc, scale, N)
+
+    # Calculate the points
+    points = origin + np.outer(coefficients_1, basis_vector_1) + np.outer(coefficients_2, basis_vector_2)
+    
+    return points
+
+def points_on_a_line(D, N=1000, loc=0, scale=1, d2d=True):
     samples = np.random.normal(loc=loc, scale=scale, size=(N, D))
     m = np.random.rand(1, D - 1)
     b = np.random.rand(1, 1)
     if d2d:
         m = np.random.rand(1, 1)
         b = np.random.rand(1, 1)
-        samples[:, 1] = (np.dot(samples[:, 0], m.T) + b).flatten()
+        samples[:, 1] = (np.dot(samples[:, 0][:, None], m.T) + b).flatten()
         samples[:, 2:] = 0
     else:
         samples[:, -1] = (np.dot(samples[:, :-1], m.T) + b).flatten()
@@ -55,7 +84,7 @@ def create_random_data_normal_dist(input_dimension, num=1000, loc=0, scale=1):
     # Generate random input data
     return np.random.normal(loc=loc, scale=scale, size=(num, input_dimension))
 
-def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scale=1, exp_type='normal', constant=5):
+def create_random_data(input_dimension, num=1000, normal_dsit=True, loc=0, scale=1, exp_type='normal', constant=5):
     '''
     Parameters:
     input_dimension (int): The number of features for each input sample.
@@ -86,9 +115,12 @@ def create_random_data(input_dimension, num=1000, normal_dsit=False, loc=0, scal
         
     elif exp_type == 'line':
         X = points_on_a_line(input_dimension, num, scale=scale)
-    
+
     elif exp_type == 'line_d':
         X = points_on_a_line(input_dimension, num, scale=scale, d2d=False)
+    
+    elif exp_type == 'plane':
+        X = create_2d_plane_samples(input_dimension, num, loc=loc, scale=scale)
     else:
         raise Exception("Unknonw type data")
 

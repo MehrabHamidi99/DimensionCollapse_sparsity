@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+np.random.seed(33)
 from scipy.spatial.distance import pdist, squareform
 from scipy.spatial.distance import cdist
 from scipy.linalg import eigh
@@ -7,6 +8,8 @@ from scipy.linalg import eigh
 from collections import defaultdict
 
 import torch
+torch.manual_seed(33)
+
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
@@ -16,6 +19,7 @@ from sklearn.decomposition import PCA
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
+import seaborn as sns
 
 import os
 # os.chdir('/content/gdrive/MyDrive/DeepReluSymmetries/')
@@ -27,11 +31,14 @@ import torch.nn.functional as F
 from torchvision import datasets, transforms
 
 from tqdm import tqdm
+import faiss
+
+from scipy.spatial import ConvexHull
 
 def c(m):
-    xy=np.dot(m,m.T) # O(k^3)
-    x2=y2=(m*m).sum(1) #O(k^2)
-    d2=np.add.outer(x2,y2)-2*xy  #O(k^2)
+    xy = np.dot(m, m.T) # O(k^3)
+    x2 = y2 = (m * m).sum(1) #O(k^2)
+    d2 = np.add.outer(x2, y2)- 2 * xy  #O(k^2)
     d2.flat[::len(m)+1]=0 # Rounding issues
     return d2
     # return np.sqrt(d2)  # O (k^2)
@@ -135,6 +142,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
     ax.set_ylabel('Frequency')
 
 def get_pc_components(data, n_components=2):
+    data = data - np.mean(data)
     covar_matrix = np.matmul(data.T , data)
     # Perform PCA
     d = covar_matrix.shape[0]
@@ -146,7 +154,7 @@ def get_pc_components(data, n_components=2):
     projected_data = np.dot(data, vectors)
     return projected_data[:, -1], projected_data[:, -2]
 
-def plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, this_path, costume_range, pre_path, scale):
+def plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, this_path, costume_range, pre_path, scale, eigenvectors):
 
     fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
 
@@ -154,17 +162,17 @@ def plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d
 
         animate_histogram(axs[0, 0], frame, layer_activation_ratio, 'layer ')
         animate_histogram(axs[0, 1], frame, eigens, 'layers: ', x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
-        animate_histogram(axs[0, 2], frame, dist_all / max(1, np.mean(dist_all)), 'layers: ', x_axis_title='distance from origin distribution / mean', fixed_scale=True, custom_range=scale, step=False)
+        animate_histogram(axs[0, 2], frame, dist_all / max(1, np.max(dist_all[frame])), 'layers: ', x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False)
 
-        plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=costume_range)
-        plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=costume_range)
+        plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()))
 
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], frame, list_pca_3d, type_analysis='pca', dim=3, costume_range=costume_range)
+        plot_data_projection(axs[1, 2], frame, list_pca_3d, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=costume_range)
+        plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()))
 
     # Create animation
     anim = FuncAnimation(fig, update, frames=len(layer_activation_ratio), repeat=False)
@@ -183,14 +191,17 @@ def plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d
     plt.close()  # Close the plot to prevent it from displaying statically
 
 
-def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=10):
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=10, eigenvectors=None):
+    # eigenvectors_2d = eigenvectors[0]
+    
     ax.clear()
     ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], s=10)
-
     if type_analysis == 'pca':
         ax.set_xlabel('First Principal Component')
         ax.set_ylabel('Second Principal Component')
         if dim == 2:
+            ax.quiver([0, 0], eigenvectors[0][:, 0][0], eigenvectors[0][:, 0][1])
+            ax.quiver([0, 0], eigenvectors[0][:, 1][0], eigenvectors[0][:, 1][1])
             ax.set_title('Data in First Two Principal Components')
         if dim == 3:
             ax.set_zlabel('Third Principal Component')
@@ -208,10 +219,10 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
         ax.set_title(title[counter])
     else:
         ax.set_title(f'{title} {counter + 1}')
-    ax.set_ylim(-1 * costume_range * 5, costume_range * 5)
-    ax.set_xlim(-1 * costume_range * 5, costume_range * 5)
+    ax.set_ylim(-1 * costume_range, costume_range)
+    ax.set_xlim(-1 * costume_range, costume_range)
     if dim == 3:
-        ax.set_zlim(-1 * costume_range * 5, costume_range * 5)
+        ax.set_zlim(-1 * costume_range, costume_range)
         
 def projection_analysis(data, type_anal, dim):
     if data.shape[1] == 2:
@@ -232,7 +243,7 @@ def projection_analysis(data, type_anal, dim):
             return data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]], data[0:data.shape[0], random_dims[2]]
     raise Exception("type or dim set wrong!")
 
-def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvalues=False):
+def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvectors=False):
     """
     Counts the number of eigenvalues of the covariance matrix of the data that are close to zero.
 
@@ -243,15 +254,18 @@ def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvalues=False):
     Returns:
     int: The number of eigenvalues close to zero.
     """
-    covar_matrix = np.matmul(data.T , data)
-    if return_eigenvalues:
+    normalized_data = data - np.mean(data)
+    normalized_data = np.array(normalized_data, dtype=np.float64)
+    covar_matrix = np.dot(normalized_data.transpose() , normalized_data)
+    if return_eigenvectors:
         values, vectors = eigh(covar_matrix, eigvals_only=False)
 
         near_zero_count = np.sum(np.abs(values) > threshold)
-        return near_zero_count, values
+        return near_zero_count, values, vectors
     
-    values = eigh(covar_matrix, eigvals_only=True)
-    near_zero_count = np.sum(np.abs(values) > threshold)
+    values = eigh(covar_matrix, b=np.eye(len(covar_matrix), dtype=covar_matrix.dtype), eigvals_only=True, turbo=True, check_finite=False)
+    values[values < 0] = 0
+    near_zero_count = np.sum(values > threshold)
     return near_zero_count, values
 
 def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal', model_type='mlp', return_pre_path=False):
@@ -275,13 +289,13 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
     print(this_path)
     return this_path
 
-def plotting_actions(res1, eigen_count, num, this_path, net, distances, suffix=''):
+def plotting_actions(res1, stable_ranks_all, simple_spherical_mean_width_all, spherical_mean_width_v2_all, eigen_count, num, this_path, net, distances, display_neuron_matrx, cell_dims, suffix=''):
     # Activation plot
-    fig, ax = plt.subplots(2, 2, figsize=(20, 20))
+    fig, ax = plt.subplots(4, 2, figsize=(20, 20))
     tp = ax[0, 0].hist(res1 / num, bins=100)
     ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
     ax[0, 0].set_ylabel('neuron frequency')
-    ax[0, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
+    ax[0, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list)), str(cell_dims)))
     # fig.savefig(this_path + suffix + 'additive_activations.pdf')
     # plt.xlim(0, 1)
     # plt.close(fig)
@@ -292,9 +306,10 @@ def plotting_actions(res1, eigen_count, num, this_path, net, distances, suffix='
     tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
     ax[0, 1].set_ylabel('number of non-zero eigenvalues')
     ax[0, 1].set_xlabel('layers')
-    ax[0, 1].set_title('Non-zero eigenvalues for network with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
+    ax[0, 1].set_title('Non-zero eigenvalues for network with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list)), str(cell_dims)))
     # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.pdf')
     # plt.close(fig)
+
 
 # def plot_distances(net, distances, this_path, suffix=''):
     # fig, ax = plt.subplots(figsize=(7, 7))
@@ -305,22 +320,61 @@ def plotting_actions(res1, eigen_count, num, this_path, net, distances, suffix='
     # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
     ax[1, 0].set_ylabel('mean distances from origin')
     ax[1, 0].set_xlabel('layers')
-    ax[1, 0].set_title('mean distances from origin per layer with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list))))
+    ax[1, 0].set_title('mean distances from origin per layer with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list)), str(cell_dims)))
     ax[1, 0].legend()
     
+    sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax[1, 1])
+
+    tp = ax[2, 0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
+    ax[2, 0].set_ylabel('Stable Rank')
+    ax[2, 0].set_xlabel('layers')
+    ax[2, 0].set_title('Stable Rank for network with #neurons:{}, #layers:{}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list)), str(cell_dims)))
+
+
+    tp = ax[2, 1].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
+    ax[2, 1].set_ylabel('Spherical Mean Width')
+    ax[2, 1].set_xlabel('layers')
+    ax[2, 1].set_title('Spherical Mean Width for network with #neurons:{}, #layers:{}, Polyhedral dim: {}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list)), str(cell_dims)))
+
+    tp = ax[3, 0].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
+    ax[3, 0].set_ylabel('Spherical Mean Width - v2')
+    ax[3, 0].set_xlabel('layers')
+    ax[3, 0].set_title('Spherical Mean Width v2 for network with #neurons:{}, #layers:{}, Polyhedral dim: {}'.format(str(np.sum(net.layer_list)), str(len(net.layer_list)), str(cell_dims)))
+
     fig.savefig(this_path + suffix + 'all_plots.pdf')
     plt.close(fig)
 
+def calc_spherical_mean_width_v2(this_data, num_directions=1e4):
+    directions = np.random.rand(int(num_directions), this_data.shape[1]) # T x D
+    directions = np.array(directions, dtype=np.double)
+    # directions /= np.sqrt((directions ** 2).sum(-1))[..., np.newaxis]
+    directions /= np.sqrt(np.einsum('...i,...i', directions, directions))[..., np.newaxis]
+    mean_width = np.dot(this_data, directions.transpose()) # N x T
+
+    mean_width = np.max(mean_width, axis=0)
+    return np.mean(mean_width)
+
 
 def additional_analysis_for_full_data(this_data):
-    res = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
+    res = count_near_zero_eigenvalues(this_data, return_eigenvectors=False)
+    singular_values = np.sqrt(res[1])
+    stable_rank = np.sum(singular_values) / np.max(singular_values)
+    simple_spherical_mean_width = 2 * np.mean(singular_values)
+    spherical_mean_width_v2 = calc_spherical_mean_width_v2(this_data)
+    
     # cdist(this_data, np.array([np.zeros(this_data.shape[1])]))
     distances_this_data = distance_from_origin(this_data)
-    return res[0], res[1], distances_this_data, [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
+
+    return res[0], res[1], distances_this_data, [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)], stable_rank, simple_spherical_mean_width, spherical_mean_width_v2
 
 def projection_analysis_for_full_data(this_data, return_eigenvalues):
-    res_list = count_near_zero_eigenvalues(this_data, return_eigenvalues=False)
-    return res_list[1], projection_analysis(this_data, 'pca', 2), projection_analysis(this_data, 'pca', 3), projection_analysis(this_data, 'random', 2), projection_analysis(this_data, 'random', 3) 
+    res_list = count_near_zero_eigenvalues(this_data, return_eigenvectors=return_eigenvalues)
+    
+    hull = ConvexHull(this_data)
+    print(hull.area)
+    print(hull.volume)
+
+    return res_list[1], res_list[2], projection_analysis(this_data, 'pca', 2), projection_analysis(this_data, 'pca', 3), projection_analysis(this_data, 'random', 2), projection_analysis(this_data, 'random', 3) 
 
 def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path, costume_range=10):
     plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path, costume_range=costume_range)

@@ -75,7 +75,7 @@ if __name__ == '__main__':
     biasses = [0, 1e-4]
     scales = [1, 100]
     locs = [0]
-    pp = 'results_resNet3/'
+    pp = 'results_resNet4/'
 
     for bias in biasses:
         BIAS = bias

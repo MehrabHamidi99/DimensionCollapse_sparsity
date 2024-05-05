@@ -22,7 +22,6 @@ def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=
   '''
   # visualize_1D_boundaries(net)
   x, y = create_random_data(input_dimension=d, num=n, normal_dsit=normal_dist, loc=loc, scale=scale, exp_type=exp_type, constant=constant)
-  # stable_neuron_analysis(model, x, device)
   return stable_neuron_analysis(model, x, y, device, eval)
 
   
@@ -58,6 +57,11 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   dist_all = np.zeros((len(architecture[1]) + 1, num))
 
   dist_stats = []
+  display_neuron_matrx_s = []
+  stable_ranks_all = []
+  simple_spherical_mean_width_all = []
+  spherical_mean_width_v2_all = []
+  cell_dims = []
 
   if model_type == 'mlp':
     net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
@@ -66,7 +70,7 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
 
   net.to(device)
   for i in tqdm(range(exps)):
-    r1, count_num, eigen, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
+    r1, cell_dim, stable_ranks, simple_spherical_mean_width, spherical_mean_width_v2, count_num, eigen, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,
                                     exp_type=exp_type, constant=constant, eval=False)
     res_run1 += [r1]
@@ -74,28 +78,40 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
     eigen_count += [count_num]
     dist_all = (dist_all + dists) / 2.0
     dist_stats += [dist_stats_this]
+    stable_ranks_all += [stable_ranks]
+    simple_spherical_mean_width_all += [simple_spherical_mean_width]
+    spherical_mean_width_v2_all += [spherical_mean_width_v2]
+    cell_dims += [cell_dim]
+    # print(i)
+    
+    display_neuron_matrx_s += [net.analysis_neurons_activations_depth_wise()]
     net.reset()
     
   res1 = np.array(res_run1).mean(axis=0)
   eigen_count = np.array(eigen_count).mean(axis=0)
-  eigens = np.array(eigens).mean(axis=0)
+  eigens = np.array(eigens, dtype=object).mean(axis=0)
   dis_stats = np.array(dist_stats).mean(axis=0)
+  display_neuron_matrx_s = np.array(display_neuron_matrx_s).mean(axis=0)
+  stable_ranks_all = np.array(stable_ranks_all).mean(axis=0)
+  simple_spherical_mean_width_all = np.array(simple_spherical_mean_width_all).mean(axis=0)
+  spherical_mean_width_v2_all = np.array(spherical_mean_width_v2_all).mean(axis=0)
+  cell_dims = np.array(cell_dims).mean(axis=0)
 
-  plotting_actions(res1, eigen_count, num, this_path, net, dis_stats)
+
+  plotting_actions(res1, stable_ranks_all, simple_spherical_mean_width_all, spherical_mean_width_v2_all, eigen_count, num, this_path, net, dis_stats, display_neuron_matrx_s, cell_dims)
   # plot_distances(net=net, distances=dis_stats, this_path=this_path)
 
   layer_activation_ratio = net.analysis_neurons_layer_wise_animation(res1, num)
   # if projection_analysis_bool:
-  _, _, _, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, _, _ = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
-                                normal_dist=normal_dist, loc=loc, scale=scale,
-                                exp_type=exp_type, constant=constant, eval=True)
+  
+  list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, eigen_vectors = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device, normal_dist=normal_dist, loc=loc, scale=scale, exp_type=exp_type, constant=constant, eval=True)
     # projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path=this_path, costume_range=max(np.abs(scale * 2), 10, int(np.abs(loc / 2))))
     # animate_histogram(dist_all / max(1, np.mean(dist_all)), 'layers: ', x_axis_title='distance from origin distribution / mean', save_path='distance_distribution.gif', 
     #                   pre_path=this_path, fixed_scale=True, custom_range=scale, step=False)
   
     # animate_histogram(layer_activation_ratio, 'layer ', save_path='layer_wise_.gif', pre_path=this_path)
     # animate_histogram(eigens, 'layers: ', x_axis_title='eigenvalues distribution', save_path='eigenvalues_layer_wise.gif', pre_path=this_path, fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
-  plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, this_path, costume_range=max(np.abs(scale * 2), 10, int(np.abs(loc / 2))), pre_path=this_path, scale=scale)
+  plot_gifs(layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, this_path, costume_range=max(np.abs(scale * 2), 10, int(np.abs(loc / 2))), pre_path=this_path, scale=scale, eigenvectors=np.array(eigen_vectors, dtype=object))
   
 
   if return_sth:

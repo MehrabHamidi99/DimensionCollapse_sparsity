@@ -1,3 +1,4 @@
+
 from Experiments import *
 import multiprocessing 
 import time
@@ -36,10 +37,10 @@ def run_the_whole_thing(archs, normal_dist, scale, parser, pp, projection_analys
         p_path += 'uniform/'
     p_path += 'bias_{}/'.format(str(bias))
 
-    with open(p_path + 'activated_results.pkl', 'wb') as f:
-        pickle.dump(result_list, f)
-    titles = ['hidden Layers' + str(len(arch[1])) for arch in archs]
-    animate_histogram(result_list, title=titles,  pre_path=p_path)
+    # with open(p_path + 'activated_results.pkl', 'wb') as f:
+    #     pickle.dump(result_list, f)
+    # titles = ['hidden Layers' + str(len(arch[1])) for arch in archs]
+    # animate_histogram(result_list, title=titles,  pre_path=p_path)
 
     pool.close()
 
@@ -60,27 +61,23 @@ if __name__ == '__main__':
             help='', type=str2bool)
     args = parser.parse_args()
     archs_all = [
-        (100, [100, 100, 100, 100, 100]),
-        (100, [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]),
-        (100, [100 for _ in range(30)]),
-        (10, [10 for _ in range(30)]),
-        (5, [5 for _ in range(30)]),
-        (8, [8 for _ in range(30)]),
-        (20, [20, 20, 20, 20]),
-        (20, [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]),
-        (20, [20 for _ in range(50)]),
-        (100, [100 for _ in range(50)]),
+        (2, [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]),
+        (2, [100 for _ in range(50)]),
+        (2, [100 for _ in range(30)]),
+        (2, [10 for _ in range(30)]),
+        (2, [5 for _ in range(30)]),
+        (2, [8 for _ in range(30)]),
+        (2, [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]),
+        (2, [20 for _ in range(50)]),
         (2, [4, 8, 16, 32, 64, 128, 256, 512, 1024]),
-        (512, [256, 128, 64, 32, 16, 8, 4, 2]),
+        (2, [256, 128, 64, 32, 16, 8, 4, 2]),
         (2, [16, 64, 256, 256, 256, 256, 256, 256, 256, 256]),
-        (2, [16, 64, 128, 128, 128, 128, 128, 128, 128, 128, 128, 512, 512, 1024]),
-        (2, [16, 64, 256, 256, 256, 256, 256, 256, 256, 256, 512, 512, 512, 1024, 1024, 1024, 1024, 512, 256, 128, 64, 32, 16, 2]),
-        (512, [256, 128, 64, 64, 64, 64, 512])
+        (2, [256, 128, 64, 64, 64, 64, 512])
     ]
-    biasses = [0, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
-    scales = [1, 5, 20, 100]
-    locs = [-20, 0, 20]
-    pp = 'results_selective/'
+    biasses = [0]
+    scales = [1, 100, 1000]
+    locs = [0]
+    pp = 'new_results_2d_april/'
 
 
     for bias in biasses:
@@ -88,41 +85,33 @@ if __name__ == '__main__':
         for scale in scales:   
             SCALE = scale
          
-            EXP_TYPE = 'normal'
             for loc in locs:
                 LOC = loc
-                NORMAL = True
-                # archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 30, 1)]
+                
+                EXP_TYPE = 'plane'
                 starttime = time.time()
-                # prod1=partial(regul)
-                # pool.map(regul, [(archs1, 15), (archs2, 100)])
-                # print(arch_this, 'arch this')
                 regul(archs_all, args, pp)
-                # regul(archs2, 100)
-
                 print('That took {} seconds'.format(time.time() - starttime), flush=True)
 
-            EXP_TYPE = 'fixed'
-            LOC = loc
-            NORMAL = True
-            # archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 30, 1)]
-            starttime = time.time()
-            # prod1=partial(regul)
-            # pool.map(regul, [(archs1, 15), (archs2, 100)])
-            # print(arch_this, 'arch this')
-            regul(archs_all, args, pp)
-            # regul(archs2, 100)
+                EXP_TYPE = 'normal'
+                NORMAL = True
+                starttime = time.time()
+                regul(archs_all, args, pp)
+                print('That took {} seconds'.format(time.time() - starttime), flush=True)
+                
+                EXP_TYPE = 'line'
+                starttime = time.time()
+                regul(archs_all, args, pp)
+                print('That took {} seconds'.format(time.time() - starttime), flush=True)
 
-            print('That took {} seconds'.format(time.time() - starttime), flush=True)
+                EXP_TYPE = 'fixed'
+                starttime = time.time()
+                regul(archs_all, args, pp)
+                print('That took {} seconds'.format(time.time() - starttime), flush=True)
 
 
-        
+        EXP_TYPE = 'normal'
         NORMAL = False
-        # archs1 = [(constant, [constant for _ in range(i)]) for i in range(1, 30, 1)]
         starttime = time.time()
-        # prod1=partial(regul)
-        # pool.map(regul, [(archs1, 15), (archs2, 100)])
         regul(archs_all, args, pp)
-        # regul(archs2, 100)
-
         print('That took {} seconds'.format(time.time() - starttime), flush=True)

@@ -60,23 +60,20 @@ if __name__ == '__main__':
             help='', type=str2bool)
     args = parser.parse_args()
     archs_all = [
-        (100, [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]),
-        (100, [100 for _ in range(50)]),
-        (100, [100 for _ in range(30)]),
-        (10, [10 for _ in range(30)]),
-        (5, [5 for _ in range(30)]),
-        (8, [8 for _ in range(30)]),
-        (20, [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]),
-        (20, [20 for _ in range(50)]),
-        (2, [4, 8, 16, 32, 64, 128, 256, 512, 1024]),
-        (512, [256, 128, 64, 32, 16, 8, 4, 2]),
-        (2, [16, 64, 256, 256, 256, 256, 256, 256, 256, 256]),
-        (512, [256, 128, 64, 64, 64, 64, 512])
+        (2, [100 for _ in range(50)]),
+        (2, [100 for _ in range(30)]),
+        (2, [100 for _ in range(60)]),
+        (2, [100 for _ in range(90)]),
+        (2, [10 for _ in range(30)]),
+        (2, [8 for _ in range(30)]),
+        (2, [20 for _ in range(50)])
+        (2, [20 for _ in range(50)])
+
     ]
-    biasses = [0, 1e-3]
-    scales = [1, 100]
+    biasses = [0]
+    scales = [1, 100, 1000]
     locs = [0]
-    pp = 'results_selective_line/'
+    pp = 'new_results_2d_april/'
 
 
     for bias in biasses:
@@ -87,12 +84,18 @@ if __name__ == '__main__':
             for loc in locs:
                 LOC = loc
                 
-                EXP_TYPE = 'line'
+                EXP_TYPE = 'plane'
                 starttime = time.time()
                 regul(archs_all, args, pp)
                 print('That took {} seconds'.format(time.time() - starttime), flush=True)
 
                 EXP_TYPE = 'normal'
+                NORMAL = True
+                starttime = time.time()
+                regul(archs_all, args, pp)
+                print('That took {} seconds'.format(time.time() - starttime), flush=True)
+                
+                EXP_TYPE = 'line'
                 starttime = time.time()
                 regul(archs_all, args, pp)
                 print('That took {} seconds'.format(time.time() - starttime), flush=True)
@@ -101,8 +104,6 @@ if __name__ == '__main__':
                 starttime = time.time()
                 regul(archs_all, args, pp)
                 print('That took {} seconds'.format(time.time() - starttime), flush=True)
-
-
 
 
         EXP_TYPE = 'normal'
