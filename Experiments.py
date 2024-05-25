@@ -63,13 +63,16 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   spherical_mean_width_v2_all = []
   cell_dims = []
 
-  if model_type == 'mlp':
-    net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
-  else:
-    net = ResNet_arch(n_in=architecture[0], layer_list=architecture[1], bias=bias)
 
-  net.to(device)
   for i in tqdm(range(exps)):
+
+
+    if model_type == 'mlp':
+      net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+    else:
+      net = ResNet_arch(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+    net.to(device)
+    
     r1, cell_dim, stable_ranks, simple_spherical_mean_width, spherical_mean_width_v2, count_num, eigen, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,
                                     exp_type=exp_type, constant=constant, eval=False)

@@ -370,9 +370,10 @@ def additional_analysis_for_full_data(this_data):
 def projection_analysis_for_full_data(this_data, return_eigenvalues):
     res_list = count_near_zero_eigenvalues(this_data, return_eigenvectors=return_eigenvalues)
     
-    hull = ConvexHull(this_data)
-    print(hull.area)
-    print(hull.volume)
+    # hull = ConvexHull(this_data)
+    # print('area', hull.area)
+    # print('volume', hull.volume)
+    # print("----")
 
     return res_list[1], res_list[2], projection_analysis(this_data, 'pca', 2), projection_analysis(this_data, 'pca', 3), projection_analysis(this_data, 'random', 2), projection_analysis(this_data, 'random', 3) 
 
