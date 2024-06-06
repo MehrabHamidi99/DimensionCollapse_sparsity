@@ -31,8 +31,6 @@ import torch.nn.functional as F
 from torchvision import datasets, transforms
 
 from tqdm import tqdm
-import faiss
-
 from scipy.spatial import ConvexHull
 
 def c(m):
@@ -351,7 +349,7 @@ def calc_spherical_mean_width_v2(this_data, num_directions=1e4):
     directions /= np.sqrt(np.einsum('...i,...i', directions, directions))[..., np.newaxis]
     mean_width = np.dot(this_data, directions.transpose()) # N x T
 
-    mean_width = np.max(mean_width, axis=0)
+    mean_width = np.max(mean_width, axis=0) - np.min(mean_width, axis=0)
     return np.mean(mean_width)
 
 

@@ -26,7 +26,7 @@ def one_random_dataset_run(model, n, d, device, normal_dist=False, loc=0, scale=
 
   
 def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=False, pre_path='', normal_dist=False, 
-                          loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True, bias=1e-4, model_type='mlp'):
+                          loc=0, scale=1, exp_type='normal', constant=5, projection_analysis_bool=False, stats=True, bias=1e-4, model_type='mlp', new_network_each_time=False):
   '''
     Parameters
     architecture (tuple): A tuple where the first element is the number of input features, and the second element is a list of layer sizes for the network.
@@ -63,15 +63,21 @@ def one_random_experiment(architecture, exps=50, num=1000, one=True, return_sth=
   spherical_mean_width_v2_all = []
   cell_dims = []
 
+  if model_type == 'mlp':
+    net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+  else:
+    net = ResNet_arch(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+  net.to(device)
+
 
   for i in tqdm(range(exps)):
 
-
-    if model_type == 'mlp':
-      net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
-    else:
-      net = ResNet_arch(n_in=architecture[0], layer_list=architecture[1], bias=bias)
-    net.to(device)
+    if new_network_each_time:
+      if model_type == 'mlp':
+        net = MLP_ReLU(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+      else:
+        net = ResNet_arch(n_in=architecture[0], layer_list=architecture[1], bias=bias)
+      net.to(device)
     
     r1, cell_dim, stable_ranks, simple_spherical_mean_width, spherical_mean_width_v2, count_num, eigen, dists, dist_stats_this = one_random_dataset_run(model=net, n=num, d=architecture[0], device=device,
                                     normal_dist=normal_dist, loc=loc, scale=scale,

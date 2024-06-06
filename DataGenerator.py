@@ -122,6 +122,7 @@ def create_random_data(input_dimension, num=1000, normal_dsit=True, loc=0, scale
     elif exp_type == 'plane':
         X = create_2d_plane_samples(input_dimension, num, loc=loc, scale=scale)
     else:
+        print(exp_type)
         raise Exception("Unknonw type data")
 
 

@@ -6,6 +6,8 @@ from functools import partial
 import pickle
 import argparse
 
+import itertools
+
 
 SCALE = -1
 LOC = -1
@@ -20,7 +22,8 @@ PP = 'new_results_2d_may'
 
 
 def run_the_whole_thing(tmp_input):
-    archs, loc, scale, exp_type_this, bias = tmp_input
+    print(tmp_input)
+    archs, bias, scale, loc, exp_type_this = tmp_input
     one_random_experiment(architecture=archs,
                           exps=EXP,
                           num=NUM,
@@ -71,7 +74,7 @@ if __name__ == '__main__':
 
     pool = multiprocessing.Pool(processes=40)
     prod_x=partial(run_the_whole_thing)
-    pool.map(prod_x, zip(archs_all, biasses, scales, locs, exp_all))
+    pool.map(prod_x, itertools.product(archs_all, biasses, scales, locs, exp_all))
     
     pool.close()
     pool.join()
