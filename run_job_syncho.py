@@ -17,24 +17,26 @@ EXP_TYPE = 'normal'
 EXP = 30
 NUM=10000
 
-PP = 'new_results_2d_may'
+PP = 'new_results_2d_june'
 
 
 
 def run_the_whole_thing(tmp_input):
     print(tmp_input)
     archs, bias, scale, loc, exp_type_this = tmp_input
-    one_random_experiment(architecture=archs,
+    data_prop = {
+        'normal_dist': True, 
+        'loc': loc, 
+        'scale': scale, 
+        'exp_type': exp_type_this
+    }
+    random_experiment_hook_engine(architecture=archs,
                           exps=EXP,
                           num=NUM,
-                          one=False,
-                          loc=loc,
-                          scale=scale,
+                          data_properties=data_prop,
                           pre_path='{}/'.format(PP),
-                          normal_dist=NORMAL,
-                          exp_type=exp_type_this,
-                          projection_analysis_bool=True, 
-                          bias=bias
+                          bias=bias,
+                          model_type='mlp'
                           )
 
 
