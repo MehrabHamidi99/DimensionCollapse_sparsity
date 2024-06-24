@@ -13,12 +13,12 @@ def single_layer_analysis(output, extra, additional_analysis):
 
     if additional_analysis:
       # self.eigenvalues_count, self.eigenvalues, self.dis_values, self.dis_stats, self.eigenvectors = additional_analysis_for_full_data(deteached_version)
-      eigenvalues_count, eigenvalues, dis_values, dis_stats, stable_rank, simple_spherical_mean_width, spherical_mean_width_v2 = additional_analysis_for_full_data(deteached_version)
+      eigenvalues_count, eigenvalues, dis_values, dis_stats, stable_rank, simple_spherical_mean_width, spherical_mean_width_v2, hamming_dists = additional_analysis_for_full_data(deteached_version)
       if not extra:
-         return non_zero, cell_dim, stable_rank, simple_spherical_mean_width, spherical_mean_width_v2, eigenvalues_count, eigenvalues, dis_values, dis_stats
+         return non_zero, cell_dim, stable_rank, simple_spherical_mean_width, spherical_mean_width_v2, eigenvalues_count, eigenvalues, dis_values, dis_stats, hamming_dists
     if extra:
       eigenvalues, eigenvectors, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d = projection_analysis_for_full_data(deteached_version, True)
-      return non_zero, cell_dim, stable_rank, simple_spherical_mean_width, spherical_mean_width_v2, eigenvalues_count, eigenvalues, eigenvectors, dis_values, dis_stats, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d
+      return non_zero, cell_dim, stable_rank, simple_spherical_mean_width, spherical_mean_width_v2, eigenvalues_count, eigenvalues, eigenvectors, dis_values, dis_stats, hamming_dists, plot_list_pca_2d, plot_list_pca_3d, plot_list_random_2d, plot_list_random_3d
     return non_zero, cell_dim
 
 
@@ -39,11 +39,13 @@ class CustomLinearWithActivation(nn.Linear):
           self.eigenvectors = []
           self.dis_values = []
           self.dis_stats = []
+          self.hamming_dists = []
 
           self.stable_rank = -1
           self.simple_spherical_mean_width = -1
-          spherical_mean_width_v2 = -1
+          self.spherical_mean_width_v2 = -1
           self.cell_dim = []
+          
 
         if self.extra:
           self.plot_list_pca_2d = []
@@ -57,9 +59,9 @@ class CustomLinearWithActivation(nn.Linear):
         output = self.activation(output)
         
         if self.extra: 
-          non_zero, cell_dim, self.stable_rank, self.simple_spherical_mean_width, self.spherical_mean_width_v2, self.eigenvalues_count, self.eigenvalues, self.eigenvectors, self.dis_values, self.dis_stats, self.plot_list_pca_2d, self.plot_list_pca_3d, self.plot_list_random_2d, self.plot_list_random_3d = single_layer_analysis(output, self.extra, self.additional_analysis)
+          non_zero, cell_dim, self.stable_rank, self.simple_spherical_mean_width, self.spherical_mean_width_v2, self.eigenvalues_count, self.eigenvalues, self.eigenvectors, self.dis_values, self.dis_stats, self.hamming_dists, self.plot_list_pca_2d, self.plot_list_pca_3d, self.plot_list_random_2d, self.plot_list_random_3d = single_layer_analysis(output, self.extra, self.additional_analysis)
         elif self.additional_analysis:
-          non_zero, cell_dim, self.stable_rank, self.simple_spherical_mean_width, self.spherical_mean_width_v2, self.eigenvalues_count, self.eigenvalues, self.dis_values, self.dis_stats = single_layer_analysis(output, self.extra, self.additional_analysis)
+          non_zero, cell_dim, self.stable_rank, self.simple_spherical_mean_width, self.spherical_mean_width_v2, self.eigenvalues_count, self.eigenvalues, self.dis_values, self.dis_stats, self.hamming_dists = single_layer_analysis(output, self.extra, self.additional_analysis)
         else:
           non_zero, cell_dim = single_layer_analysis(output, self.extra, self.additional_analysis)
         self.non_zero += non_zero
@@ -246,6 +248,7 @@ class ParentNetwork(nn.Module, ABC):
           simple_spherical_mean_width = [tmp_res[5]]
           spherical_mean_width_v2 = [tmp_res[6]]
           cell_dims = []
+          haming_dists = [tmp_res[7]]
       else:
         if self.extra_mode:
           plot_list_pca_2d = []
@@ -262,6 +265,7 @@ class ParentNetwork(nn.Module, ABC):
           simple_spherical_mean_width = []
           spherical_mean_width_v2 = []
           cell_dims = []
+          haming_dists = []
       i = 0
   
       for layer in self.layers:
@@ -281,6 +285,7 @@ class ParentNetwork(nn.Module, ABC):
           simple_spherical_mean_width.append(layer.simple_spherical_mean_width)
           spherical_mean_width_v2.append(layer.spherical_mean_width_v2)
           cell_dims.append(layer.cell_dim)
+          haming_dists.append(layer.hamming_dists)
         i += 1
 
       cell_dims = np.array(cell_dims)
