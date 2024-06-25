@@ -115,11 +115,17 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=30, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False, zero_one=True, eigens=False):
+def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=100, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False, zero_one=True, eigens=False, num=1000, norms=False):
     ax.clear()
     new_act = activation_data[counter]
-    if eigens:
-        new_act = new_act[new_act < 1000]
+    if zero_one:
+        new_act /= num
+    if eigens:    
+        new_act = new_act[new_act > -1000]
+    if norms:
+        new_act = np.array(new_act)
+        new_act /= max(1, np.max(new_act))
+
     if pd.isna(activation_data[counter]).any():
         if step:
             ax.hist(np.nan_to_num(new_act, nan=0), bins=bins, histtype='step')
@@ -129,7 +135,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
         if step:
             ax.hist(new_act.flatten(), bins=bins, histtype='step')
         else:
-            ax.hist(np.nan_to_num(new_act, nan=0).flatten(), bins=bins)
+            ax.hist(new_act, bins=bins)
 
     if type(title) is list:
         ax.set_title(title[counter])
@@ -156,17 +162,18 @@ def get_pc_components(data, n_components=2):
     projected_data = np.dot(data, vectors)
     return projected_data[:, -1], projected_data[:, -2]
 
-def plot_gifs(result_dict, this_path, costume_range, pre_path, scale, eigenvectors):
+def plot_gifs(result_dict, this_path, costume_range, pre_path, scale, eigenvectors, num):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d = result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
-
+    dist_all = np.array(dist_all)
+    
     fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
 
     def update(frame):
 
-        animate_histogram(axs[0, 0], frame, layer_activation_ratio, 'layer ')
+        animate_histogram(axs[0, 0], frame, layer_activation_ratio, 'layer ', zero_one=True, num=num)
         animate_histogram(axs[0, 1], frame, eigens, 'layers: ', x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
-        animate_histogram(axs[0, 2], frame, dist_all / max(1, np.max(dist_all[frame])), 'layers: ', x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False)
+        animate_histogram(axs[0, 2], frame, dist_all, 'layers: ', x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
 
         plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors)
         plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()))
@@ -204,8 +211,8 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
         ax.set_xlabel('First Principal Component')
         ax.set_ylabel('Second Principal Component')
         if dim == 2:
-            ax.quiver([0, 0], eigenvectors[0][:, 0][0], eigenvectors[0][:, 0][1])
-            ax.quiver([0, 0], eigenvectors[0][:, 1][0], eigenvectors[0][:, 1][1])
+            ax.quiver([0, 0], eigenvectors[0][:, -1][0], eigenvectors[0][:, -1][1])
+            ax.quiver([0, 0], eigenvectors[0][:, -2][0], eigenvectors[0][:, -2][1])
             ax.set_title('Data in First Two Principal Components')
         if dim == 3:
             ax.set_zlabel('Third Principal Component')
@@ -274,7 +281,7 @@ def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvectors=False)
     near_zero_count = np.sum(values > threshold)
     return near_zero_count, values
 
-def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal', model_type='mlp', return_pre_path=False):
+def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal', model_type='mlp', return_pre_path=False, new_model_each_time=False):
     if normal_dist:
         pre_path += '{}_mean_{}_std{}/'.format(str(exp_type), str(loc), str(scale))
     else:
@@ -283,6 +290,8 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
     if return_pre_path:
         return pre_path
     pre_path = pre_path + which + 'bias{}_exps{}_num{}_center_{}'.format(str(bias), str(exps), str(num), str(loc))
+    if new_model_each_time:
+        pre_path += '_new_model_each_time'
     pre_path = pre_path + '_{}'.format(model_type)
     this_path = pre_path + '_{}/'.format(str(architecture))
     if not os.path.isdir(this_path):

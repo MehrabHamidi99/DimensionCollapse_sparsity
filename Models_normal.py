@@ -25,7 +25,7 @@ class MLP_simple(nn.Module):
             self.layers.add_module(f"linear_{i + 1}", nn.Linear(layer_list[i], layer_list[i + 1]))
             self.layers.add_module(f"relu_{i + 1}", nn.ReLU())
 
-        self.apply(self.init_weights)
+        self.init_all_weights()
 
     def forward(self, x):
         '''
@@ -43,6 +43,9 @@ class MLP_simple(nn.Module):
         output = self.layers(x)
         return output
     
+    def init_all_weights(self):
+        self.apply(self.init_weights)
+
     def init_weights(self, m, init_type='he'):
         if isinstance(m, nn.Linear):
             if init_type == 'he':

@@ -23,7 +23,7 @@ PP = 'new_results_2d_june'
 
 def run_the_whole_thing(tmp_input):
     print(tmp_input)
-    archs, bias, scale, loc, exp_type_this = tmp_input
+    archs, bias, scale, loc, exp_type_this, new_model_each_time = tmp_input
     data_prop = {
         'normal_dist': True, 
         'loc': loc, 
@@ -36,7 +36,8 @@ def run_the_whole_thing(tmp_input):
                           data_properties=data_prop,
                           pre_path='{}/'.format(PP),
                           bias=bias,
-                          model_type='mlp'
+                          model_type='mlp', 
+                          new_model_each_time=new_model_each_time
                           )
 
 
@@ -63,7 +64,7 @@ if __name__ == '__main__':
         
         (100, [100 for _ in range(50)]),
         (100, [100 for _ in range(30)]),
-        (100, [100 for _ in range(60)]),
+        (60, [60 for _ in range(60)]),
         (100, [100 for _ in range(90)]),
 
         (20, [20 for _ in range(50)]),
@@ -73,10 +74,11 @@ if __name__ == '__main__':
     scales = [1, 100, 500]
     locs = [0, 50]
     exp_all = ['plane', 'normal', 'line', 'fixed']
+    new_model_each_time = [True, False]
 
     pool = multiprocessing.Pool(processes=40)
     prod_x=partial(run_the_whole_thing)
-    pool.map(prod_x, itertools.product(archs_all, biasses, scales, locs, exp_all))
+    pool.map(prod_x, itertools.product(archs_all, biasses, scales, locs, exp_all, new_model_each_time))
     
     pool.close()
     pool.join()
