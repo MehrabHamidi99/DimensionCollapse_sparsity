@@ -34,16 +34,16 @@ def count_neurons(network, input_shape):
                 shape[1] = int(shape[1] / 2)
         return result
 
-# def weight_initializer(shape, dtype, partition_info):
-#     fan_in = _compute_fans(shape)[0]
-#     return random_normal(shape, stddev=(np.sqrt(2. / fan_in)))
+def weight_initializer(shape, dtype, partition_info):
+    fan_in = _compute_fans(shape)[0]
+    return random_normal(shape, stddev=(np.sqrt(2. / fan_in)))
 
-# def get_weight_initializer(scale):
-#     return lambda shape, dtype, partition_info: random_normal(
-#         shape, stddev=scale * (np.sqrt(2. / _compute_fans(shape)[0])))
+def get_weight_initializer(scale):
+    return lambda shape, dtype, partition_info: random_normal(
+        shape, stddev=scale * (np.sqrt(2. / _compute_fans(shape)[0])))
 
-# def bias_initializer(bias_std):
-#     return lambda shape, dtype, partition_info: random_normal(shape, stddev=bias_std)
+def bias_initializer(bias_std):
+    return lambda shape, dtype, partition_info: random_normal(shape, stddev=bias_std)
 
 def get_all_regions(sess, input_data, output_data, relu_states, input_placeholder, output_placeholder,
                     return_hashes=True):

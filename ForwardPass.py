@@ -6,9 +6,17 @@ from utils import *
 
 
 def hook_forward(extractor, dataset, labels, device):
-    # TODO batch running
 
     data_loader = get_data_loader(dataset, labels, batch_size=dataset.shape[0])
+    
+    for x, _ in data_loader:
+        x.to(device)
+        # Get pre-activation and activation values for each layer
+        output, relu_outputs = extractor(x)
+    # return model.analysis_neurons_activations_depth_wise(dataset.shape[0])
+    return relu_outputs
+
+def hook_forward_dataloader(extractor, data_loader, device):
     
     for x, _ in data_loader:
         x.to(device)

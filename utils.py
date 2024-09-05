@@ -16,6 +16,8 @@ import torch.nn.functional as F
 
 from sklearn.linear_model import LinearRegression, RANSACRegressor, BayesianRidge
 from sklearn.decomposition import PCA
+from sklearn.decomposition import IncrementalPCA
+
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
@@ -50,6 +52,50 @@ def distance_from_origin(vect):
         vect_cop = vect.cpu().clone().detach().numpy()
         return np.sqrt(np.sum(((vect_cop - np.zeros(vect_cop.shape)) ** 2), axis=1))
     return np.sqrt(np.sum(((vect - np.zeros(vect.shape)) ** 2), axis=1))
+
+def get_pc_components(data, n_components=2):
+    data = data - np.mean(data)
+    covar_matrix = np.matmul(data.T , data)
+    # Perform PCA
+    d = covar_matrix.shape[0]
+    if n_components == 3:
+        values, vectors = eigh(covar_matrix, eigvals=(d - 3, d - 1), eigvals_only=False)
+        projected_data = np.dot(data, vectors)
+        return projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]
+    values, vectors = eigh(covar_matrix, eigvals=(d - 2, d - 1), eigvals_only=False)
+    projected_data = np.dot(data, vectors)
+    return projected_data[:, -1], projected_data[:, -2]
+
+def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvectors=False, partial=False):
+    """
+    Counts the number of eigenvalues of the covariance matrix of the data that are close to zero.
+
+    Parameters:
+    data (numpy.ndarray): A 2D numpy array where rows represent samples and columns represent features.
+    threshold (float): A threshold to consider an eigenvalue as 'close to zero'. Default is 0.01.
+
+    Returns:
+    int: The number of eigenvalues close to zero.
+    """
+    
+    normalized_data = data - np.mean(data)
+    normalized_data = np.array(normalized_data, dtype=np.float64)
+
+    # if partial:
+    #     transformer = IncrementalPCA(n_components=7, batch_size=200)
+    covar_matrix = np.dot(normalized_data.transpose() , normalized_data)
+    if return_eigenvectors:
+        values, vectors = eigh(covar_matrix, eigvals_only=False)
+
+        near_zero_count = np.sum(np.abs(values) > threshold)
+        return near_zero_count, values, vectors
+    
+    values = eigh(covar_matrix, b=np.eye(len(covar_matrix), dtype=covar_matrix.dtype), eigvals_only=True, turbo=True, check_finite=False)
+    values[values < 0] = 0
+    near_zero_count = np.sum(values > threshold)
+    return near_zero_count, values
+
+
 
 def visualize_1D_boundaries(model, input_range=(-3, 3)):
     '''
@@ -149,20 +195,10 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
     ax.set_xlabel(x_axis_title)
     ax.set_ylabel('Frequency')
 
-def get_pc_components(data, n_components=2):
-    data = data - np.mean(data)
-    covar_matrix = np.matmul(data.T , data)
-    # Perform PCA
-    d = covar_matrix.shape[0]
-    if n_components == 3:
-        values, vectors = eigh(covar_matrix, eigvals=(d - 3, d - 1), eigvals_only=False)
-        projected_data = np.dot(data, vectors)
-        return projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]
-    values, vectors = eigh(covar_matrix, eigvals=(d - 2, d - 1), eigvals_only=False)
-    projected_data = np.dot(data, vectors)
-    return projected_data[:, -1], projected_data[:, -2]
 
-def plot_gifs(result_dict, this_path, costume_range, pre_path, scale, eigenvectors, num):
+
+
+def plot_gifs(result_dict, this_path, costume_range, pre_path, scale, eigenvectors, num, labels=None):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d = result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
     dist_all = np.array(dist_all)
@@ -175,15 +211,15 @@ def plot_gifs(result_dict, this_path, costume_range, pre_path, scale, eigenvecto
         animate_histogram(axs[0, 1], frame, eigens, 'layers: ', x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
         animate_histogram(axs[0, 2], frame, dist_all, 'layers: ', x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
 
-        plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors)
-        plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()))
+        plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels=labels)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels=labels)
 
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], frame, list_pca_3d, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors)
+        plot_data_projection(axs[1, 2], frame, list_pca_3d, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels=labels)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()))
+        plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels=labels)
 
     # Create animation
     anim = FuncAnimation(fig, update, frames=len(layer_activation_ratio), repeat=False)
@@ -202,11 +238,14 @@ def plot_gifs(result_dict, this_path, costume_range, pre_path, scale, eigenvecto
     plt.close()  # Close the plot to prevent it from displaying statically
 
 
-def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=10, eigenvectors=None):
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels=None):
     # eigenvectors_2d = eigenvectors[0]
     
     ax.clear()
-    ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], s=10)
+    if dim == 2:
+        ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], c=labels, s=10)
+    if dim == 3:
+        ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], anim_pieces[counter][2], c=labels, s=10)
     if type_analysis == 'pca':
         ax.set_xlabel('First Principal Component')
         ax.set_ylabel('Second Principal Component')
@@ -230,10 +269,11 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
         ax.set_title(title[counter])
     else:
         ax.set_title(f'{title} {counter + 1}')
-    ax.set_ylim(-1 * costume_range, costume_range)
-    ax.set_xlim(-1 * costume_range, costume_range)
-    if dim == 3:
-        ax.set_zlim(-1 * costume_range, costume_range)
+    if costume_range:
+        ax.set_ylim(-1 * costume_range, costume_range)
+        ax.set_xlim(-1 * costume_range, costume_range)
+        if dim == 3:
+            ax.set_zlim(-1 * costume_range, costume_range)
         
 def projection_analysis(data, type_anal, dim):
     if data.shape[1] == 2:
@@ -256,30 +296,10 @@ def projection_analysis(data, type_anal, dim):
             return data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]], data[0:data.shape[0], random_dims[2]]
     raise Exception("type or dim set wrong!")
 
-def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvectors=False):
-    """
-    Counts the number of eigenvalues of the covariance matrix of the data that are close to zero.
 
-    Parameters:
-    data (numpy.ndarray): A 2D numpy array where rows represent samples and columns represent features.
-    threshold (float): A threshold to consider an eigenvalue as 'close to zero'. Default is 0.01.
 
-    Returns:
-    int: The number of eigenvalues close to zero.
-    """
-    normalized_data = data - np.mean(data)
-    normalized_data = np.array(normalized_data, dtype=np.float64)
-    covar_matrix = np.dot(normalized_data.transpose() , normalized_data)
-    if return_eigenvectors:
-        values, vectors = eigh(covar_matrix, eigvals_only=False)
 
-        near_zero_count = np.sum(np.abs(values) > threshold)
-        return near_zero_count, values, vectors
-    
-    values = eigh(covar_matrix, b=np.eye(len(covar_matrix), dtype=covar_matrix.dtype), eigvals_only=True, turbo=True, check_finite=False)
-    values[values < 0] = 0
-    near_zero_count = np.sum(values > threshold)
-    return near_zero_count, values
+
 
 def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal', model_type='mlp', return_pre_path=False, new_model_each_time=False):
     if normal_dist:
@@ -377,6 +397,42 @@ def calc_spherical_mean_width_v2(this_data, num_directions=1e4):
 
     mean_width = np.max(mean_width, axis=0) - np.min(mean_width, axis=0)
     return np.mean(mean_width)
+
+
+def covariance_matrix_additional_and_projectional(covariance_matrix, data, result_dict, threshold=1e-7):
+    covar_matrix = covariance_matrix.cpu().detach().numpy()
+
+    values, vectors = eigh(covar_matrix, eigvals_only=False)
+
+    near_zero_count = np.sum(np.abs(values) > threshold)
+
+    result_dict['nonzero_eigenvalues_count'].append(near_zero_count)
+    result_dict['eigenvalues'].append(values)
+
+    singular_values = np.sqrt(values)
+
+    result_dict['stable_rank'].append(np.sum(singular_values) / np.max(singular_values))
+    result_dict['simple_spherical_mean_width'].append(2 * np.mean(singular_values))
+    result_dict['spherical_mean_width_v2'].append(calc_spherical_mean_width_v2(this_data))
+
+
+    projected_data = np.dot(data, vectors)
+    projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]
+
+    result_dict['eigenvectors'].append(vectors)
+
+    result_dict['norms'].append(distance_from_origin(data))
+
+    projected_data = np.dot(data, vectors)
+
+    result_dict['pca_2'].append((projected_data[:, -1], projected_data[:, -2]))
+    result_dict['pca_3'].append((projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]))
+    random_dims  = random.sample(set(list(range(0, data.shape[1]))), 2)
+    result_dict['random_2'].append((data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]]))
+    random_dims  = random.sample(set(list(range(0, data.shape[1]))), 3)
+    result_dict['random_3'].append((data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]], data[0:data.shape[0], random_dims[2]]))
+
+    return result_dict
 
 
 def additional_analysis_for_full_data(this_data, result_dict):

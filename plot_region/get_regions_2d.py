@@ -2,13 +2,20 @@ import numpy as np
 import tensorflow as tf
 import pickle
 import os
+print(os.getcwd())
+os.chdir('DeepReLuSymmetries/plot_region')
 from tools import weight_initializer, bias_initializer, load_mnist, random_string
 from tools import count_regions_2d_2, get_sample_plane
 
-TRAIN = ('../datasets/mnist/train-images-idx3-ubyte',
-         '../datasets/mnist/train-labels-idx1-ubyte')
-TEST = ('../datasets/mnist/t10k-images-idx3-ubyte',
-        '../datasets/mnist/t10k-labels-idx1-ubyte')
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+tf.reset_default_graph()
+
+
+TRAIN = ('../data/MNIST/raw/train-images-idx3-ubyte',
+         '../data/MNIST/raw/train-labels-idx1-ubyte')
+TEST = ('../data/MNIST/raw/t10k-images-idx3-ubyte',
+        '../data/MNIST/raw/t10k-labels-idx1-ubyte')
 NETWORKS = [[8, 8, 8, 8, 8]]
 BIAS_STD = 0.001
 REPEATS = 5

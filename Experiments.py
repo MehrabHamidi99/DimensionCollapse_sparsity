@@ -269,9 +269,12 @@ def random_experiment_hook_engine(architecture, exps=50, num=1000, pre_path='', 
   plot_gifs(results_dict, this_path, costume_range=max(np.abs(data_properties['scale'] * 2), 10, int(np.abs(data_properties['loc'] / 2))), pre_path=this_path, scale=data_properties['scale'], eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), num=num)
   
 
+def batch_fixed_model_hook_engine(model, data_loader, data_properties, num):
 
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+  x, y = create_random_data(input_dimension=architecture[0], num=num, normal_dsit=data_properties['normal_dist'], loc=data_properties['loc'], scale=data_properties['scale'], exp_type=data_properties['exp_type'])
 
-  
+  model = MLP_simple(n_in=architecture[0], layer_list=architecture[1], bias=bias)
 
-  
+  fixed_model_batch_analysis(model, x, y, device, 'save_path', 'model_status')
