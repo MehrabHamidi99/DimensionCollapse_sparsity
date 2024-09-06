@@ -1,7 +1,7 @@
 from utils import *
 from utils import nn
 from utils import np
-
+import torch.nn.functional as F
 
 
 class MLP_simple(nn.Module):
@@ -44,27 +44,26 @@ class MLP_simple(nn.Module):
 
 
 class MNIST_classifier(nn.Module):
-    def __init__(self, bias=0, init_scale=1):
+    def __init__(self, n_in=784, layer_list=[256, 128, 64, 32, 10], bias=0, init_scale=1):
         super(MNIST_classifier, self).__init__()
 
         self.bias = bias
         self.init_scale = init_scale
+        
+        self.layers = nn.Sequential()
 
-        self.flatten = nn.Flatten()
-        self.layers = nn.Sequential(
-            nn.Linear(28 * 28, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 10)
-        )
+        self.layers.add_module(f"linear_{0}", nn.Linear(n_in, layer_list[0]))
+        self.layers.add_module(f"relu_{0}", nn.ReLU())
+        for i in range(len(layer_list) - 1):
+            self.layers.add_module(f"linear_{i + 1}", nn.Linear(layer_list[i], layer_list[i + 1]))
+            if i < len(layer_list) - 1:
+                self.layers.add_module(f"relu_{i + 1}", nn.ReLU())
 
         self.init_all_weights()
 
     def forward(self, x):
-        x = self.flatten(x)
-        x = self.layers(x)
-        return x
+        output = self.layers(x.view(-1, 784))
+        return F.log_softmax(output, dim=1)
     
     def init_all_weights(self):
         self.apply(self.init_weights)
@@ -82,4 +81,3 @@ class MNIST_classifier(nn.Module):
                 nn.init.xavier_normal_(m.weight, gain=1)
 
             m.bias.data *= self.bias
-

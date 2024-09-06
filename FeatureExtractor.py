@@ -17,7 +17,7 @@ class ReluExtractor(nn.Module):
 
     def get_activation(self, name):
         def hook(module, input, output):
-            self.activations.append(output.detach().cpu().numpy())
+            self.activations.append(output)
         return hook
 
     def forward(self, x):

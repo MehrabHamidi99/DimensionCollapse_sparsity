@@ -1,4 +1,5 @@
 from utils import *
+from torch.utils.data import DataLoader, Subset
 
 
 def gaussian_hypersphere(D, N=1000, r=1, surface=True):
@@ -195,12 +196,23 @@ def create_full_random_data(input_dimension, output_dim=1, train_num=800, val_nu
            (X_normalized[-test_num:], y_normalized[-test_num:])
 
 def creat_mnist_data():
-    transform = transforms.Compose([transforms.ToTensor()
-                                    # , transforms.Normalize((0.5,), (0.5,))
-                                    ])
-    dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-    train_set, val_set = torch.utils.data.random_split(dataset, [50000, 10000])
+    # Define transformations for the data
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))  # Normalize with mean and std of MNIST dataset
+    ])
 
+    # Download MNIST dataset
+    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
     test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-    
-    return train_set, val_set, test_dataset
+
+    # Split the training dataset into training (50,000) and validation (10,000) sets
+    train_size = 50000
+    val_size = 10000
+    train_indices = list(range(train_size))
+    val_indices = list(range(train_size, train_size + val_size))
+
+    train_dataset_split = Subset(train_dataset, train_indices)
+    val_dataset_split = Subset(train_dataset, val_indices)
+
+    return train_dataset_split, val_dataset_split, test_dataset

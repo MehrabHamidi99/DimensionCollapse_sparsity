@@ -269,12 +269,33 @@ def random_experiment_hook_engine(architecture, exps=50, num=1000, pre_path='', 
   plot_gifs(results_dict, this_path, costume_range=max(np.abs(data_properties['scale'] * 2), 10, int(np.abs(data_properties['loc'] / 2))), pre_path=this_path, scale=data_properties['scale'], eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), num=num)
   
 
-def batch_fixed_model_hook_engine(model, data_loader, data_properties, num):
+def batch_fixed_model_hook_engine(architecture, data_loader, data_properties, num):
 
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   x, y = create_random_data(input_dimension=architecture[0], num=num, normal_dsit=data_properties['normal_dist'], loc=data_properties['loc'], scale=data_properties['scale'], exp_type=data_properties['exp_type'])
 
-  model = MLP_simple(n_in=architecture[0], layer_list=architecture[1], bias=bias)
-
+  model = MLP_simple(n_in=architecture[0], layer_list=architecture[1], bias=0)
   fixed_model_batch_analysis(model, x, y, device, 'save_path', 'model_status')
+
+
+
+def mnist_training_analysis_hook_engine(try_num, archirecture=(784, [256, 128, 64, 32, 10]), epochs=50, pre_path='', bias=1e-4):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    this_path = '{}/mnist_training/try_num{}/'.format(pre_path, str(try_num))
+    if not os.path.isdir(this_path):
+        os.makedirs(this_path)
+
+    model = MNIST_classifier(n_in=archirecture[0], layer_list=archirecture[1], bias=bias)
+
+    train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels = get_mnist_data_loaders()
+
+    
+    # over_path = this_path + "untrained_"
+    # fixed_model_batch_analysis(model, train_samples, train_labels, device, '{}_{}'.format(over_path, 'train_'), '784, [256, 128, 64, 32, 10]')
+    # fixed_model_batch_analysis(model, val_samples, val_labels, device, '{}_{}'.format(over_path, 'val_'), '784, [256, 128, 64, 32, 10]')
+    # fixed_model_batch_analysis(model, test_samples, test_labels, device, '{}_{}'.format(over_path, 'test_'), '784, [256, 128, 64, 32, 10]')
+
+    train_model(model, train_loader=train_loader, test_loader=test_loader, base_path=this_path, train_x=train_samples, train_y=train_labels, val_x=val_samples, val_y=val_samples, val_loader=val_loader, epochs=epochs, loss='crossentropy')    
+

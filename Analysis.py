@@ -65,21 +65,41 @@ def merge_results(results_dict, new_result_dict):
                     results_dict[k][j] = tmp_res
     return results_dict
 
-def merge_results_batch(results_dict, batch_result_dict, sum_ones=['activations. non_zero_activations_layer_wise', 'cell_dimensions', 'batch_cell_dimensions']):
+def merge_results_batch(results_dict, batch_result_dict, sum_ones=['activations', 'non_zero_activations_layer_wise', 'cell_dimensions', 'batch_cell_dimensions'],
+                                                                    union_ones=['norms'],
+                                                                    union_inside=['pca_2', 'pca_3', 'random_2', 'random_3'],
+                                                                    mean_ones=['spherical_mean_width_v2']):
     for k, v in results_dict.items():
         if k in sum_ones:
             try:
-                results_dict[k] = v + batch_result_dict[k]
-            except:
-                try:
+                if len(v) == 0:
+                    results_dict[k] = v + batch_result_dict[k]
+                else:
                     for j in range(len(v)):
                         results_dict[k][j] = v[j] + batch_result_dict[k][j]             
-                except:
-                    for j in range(len(v)):
-                        tmp_res = []
-                        for l in range(len(v[j])):
-                            tmp_res.append(v[j][l] + batch_result_dict[k][j][l])
-                        results_dict[k][j] = tmp_res
+            except:
+                pass 
+        if k in union_ones:
+            try:
+                for j in range(len(v)):
+                    results_dict[k][j] = np.concatenate((v[j], batch_result_dict[k][j]))         
+            except:
+                pass
+        if k in union_inside:
+            try:
+                for j in range(len(v)):
+                    tmp_res = []
+                    for l in range(len(v[j])):
+                        tmp_res.append(np.concatenate((v[j][l], batch_result_dict[k][j][l])))
+                    results_dict[k][j] = tmp_res
+            except:
+                pass
+        if k in mean_ones:
+            try:
+                for j in range(len(v)):
+                    results_dict[k][j] = (v[j] + batch_result_dict[k][j]) / 2            
+            except:
+                pass
     return results_dict
 
 
@@ -103,7 +123,16 @@ def generate_heatmap_from_the_activation_list(layer_activations):
 
 def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status):
 
-    def on_the_go_analysis(result_dict, relu_outputs_batch):
+    FIRST_BATCH = None
+
+    def covar_calc(this_data):
+        batch_data_centered = this_data - torch.mean(this_data, axis=0)
+
+        # Compute covariance matrix for this batch
+        return torch.matmul(batch_data_centered.T, batch_data_centered) / (batch_data_centered.shape[0] - 1)
+
+
+    def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample):
 
         new_results = {
             'activations': [],
@@ -111,11 +140,20 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
             'cell_dimensions': [],
             'batch_cell_dimensions': [],
             'nonzero_eigenvalues_count': [],
+            'spherical_mean_width_v2': [],
+            'norms': [],
+            'pca_2': [], 
+            'pca_3': [],
+            'random_2': [],
+            'random_3': [],
         }
+        if not FIRST_BATCH:
+            covariance_matrix = covar_calc(sample)
+            new_results = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), new_results)
 
         for i in range(len(relu_outputs_batch)):
 
-            layer_act = relu_outputs_batch[i]
+            layer_act = relu_outputs_batch[i].detach().cpu().numpy()
 
             non_zero = np.sum((layer_act > 0).astype(int), axis=0) # D
 
@@ -127,38 +165,36 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
             new_results['cell_dimensions'].append(cell_dim)
             new_results['batch_cell_dimensions'].append(np.min(cell_dim))
 
+            covariance_matrix = covar_calc(relu_outputs_batch[i])
+
             if FIRST_BATCH:
-                results_dict = add_covar(results_dict, sample)
+                result_dict = batch_projectional_analysis(covariance_matrix, layer_act, result_dict)
+                result_dict = add_covar(result_dict, relu_outputs_batch[i], covariance_matrix)
             else:
-                results_dict = update_covar(results_dict, sample, i)
+                new_results = batch_projectional_analysis(covariance_matrix, layer_act, new_results)
+                result_dict = update_covar(result_dict, relu_outputs_batch[i], covariance_matrix, i + 1)
 
         if FIRST_BATCH:
             FIRST_BATCH = False
-        return merge_results_batch(result_dict, new_results)
+        return merge_results_batch(result_dict, new_results), FIRST_BATCH
 
-    def update_covar(result_dict, this_data, i):
-        batch_data_centered = this_data - np.mean(this_data, axis=0)
-
-        # Compute covariance matrix for this batch
-        cov_matrix = np.cov(batch_data_centered, rowvar=False)
+    def update_covar(result_dict, this_data, covar_matrix, i):
 
         # Store covariance matrix and batch size
         result_dict['covar_matrix'][i] = (result_dict['covar_matrix'][i] * result_dict['this_batch_size'] +\
-              cov_matrix * this_data.shape[0]) / (result_dict['this_batch_size'] + this_data.shape[0])
+              covar_matrix * this_data.shape[0]) / (result_dict['this_batch_size'] + this_data.shape[0])
         return result_dict
 
-    def add_covar(result_dict, this_data)
-        batch_data_centered = this_data - np.mean(this_data, axis=0)
 
-        # Compute covariance matrix for this batch
-        cov_matrix = np.cov(batch_data_centered, rowvar=False)
+    def add_covar(result_dict, this_data, covar_matrix):
 
-        result_dict['covar_matrix'].append(cov_matrix)
+        result_dict['covar_matrix'].append(covar_matrix)
 
         return result_dict
 
 
-    results = {
+    results_dict = {
+
         'activations': [],
         'non_zero_activations_layer_wise' : [],
         'cell_dimensions': [],
@@ -179,34 +215,44 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         'this_batch_size': 0
     }
 
+    batch_labels = []
+
     feature_extractor = ReluExtractor(model, device=device)
 
     this_batch_size = min(10000, samples.shape[0])
 
     data_loader = get_data_loader(samples, labels, batch_size=this_batch_size)
 
-    results_dict = {}
-
     FIRST_BATCH = True
 
     for sample, label in data_loader:
+        sample = sample.to(device)
+        label = label.to(device)
+
+        batch_labels = batch_labels + label.detach().cpu().numpy().tolist()
 
         if FIRST_BATCH:
-            results_dict = add_covar(results_dict, sample)
+            covariance_matrix = covar_calc(sample)
+            results_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), results_dict)
+
+            results_dict = add_covar(results_dict, sample, covariance_matrix)
         else:
-            results_dict = update_covar(results_dict, sample, 0)
+            results_dict = update_covar(results_dict, sample, covariance_matrix, 0)
 
         relu_outputs = hook_forward(feature_extractor, sample, label, device)
-        ـ, relu_outputs = feature_extractor(samples)
+        # ـ, relu_outputs = feature_extractor(samples)
 
-        results_dict = merge_results_batch(on_the_go_analysis(results, relu_outputs))
-        results_dict['this_batch_size'] = results_dict['this_batch_size'] + this_data.shape[0]
+        results_dict, FIRST_BATCH = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample)
+        results_dict['this_batch_size'] = results_dict['this_batch_size'] + sample.shape[0]
+
+
+    results_dict['display_matrix'] = generate_heatmap_from_the_activation_list(results_dict['activations'])
 
 
     for i in range(len(results_dict['covar_matrix'])):
-        result_dict = covariance_matrix_additional_and_projectional(results_dict['covar_matrix'][i], samples, results_dict)
+        result_dict = covariance_matrix_additional_and_projectional(results_dict['covar_matrix'][i], results_dict)
 
     plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 
-    plot_gifs(results_dict, this_path=save_path, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), num=samples.shape[0], labels=labels)
+    plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=batch_labels)
   

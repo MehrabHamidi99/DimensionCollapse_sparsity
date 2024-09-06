@@ -165,7 +165,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
     ax.clear()
     new_act = activation_data[counter]
     if zero_one:
-        new_act /= num
+        new_act = new_act / int(num)
     if eigens:    
         new_act = new_act[new_act > -1000]
     if norms:
@@ -182,6 +182,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
             ax.hist(new_act.flatten(), bins=bins, histtype='step')
         else:
             ax.hist(new_act, bins=bins)
+            plt.show()
 
     if type(title) is list:
         ax.set_title(title[counter])
@@ -198,7 +199,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
 
 
 
-def plot_gifs(result_dict, this_path, costume_range, pre_path, scale, eigenvectors, num, labels=None):
+def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path=None, scale=None, eigenvectors=None, labels=None):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d = result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
     dist_all = np.array(dist_all)
@@ -335,7 +336,10 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     tp = ax[0, 0].hist(act_count / num, bins=100)
     ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
     ax[0, 0].set_ylabel('neuron frequency')
-    ax[0, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+    if isinstance(arch, str):
+        ax[0, 0].set_title('{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    else:
+        ax[0, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
     # fig.savefig(this_path + suffix + 'additive_activations.pdf')
     # plt.xlim(0, 1)
     # plt.close(fig)
@@ -345,7 +349,10 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
     ax[0, 1].set_ylabel('number of non-zero eigenvalues')
     ax[0, 1].set_xlabel('layers')
-    ax[0, 1].set_title('Non-zero eigenvalues for network with #neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+    if isinstance(arch, str):
+        ax[0, 1].set_title('{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    else:
+        ax[0, 1].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
     # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.pdf')
     # plt.close(fig)
 
@@ -359,7 +366,10 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
     ax[1, 0].set_ylabel('mean distances from origin')
     ax[1, 0].set_xlabel('layers')
-    ax[1, 0].set_title('mean distances from origin per layer with #neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+    if isinstance(arch, str):
+        ax[1, 0].set_title('{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    else:
+        ax[1, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
     ax[1, 0].legend()
     
     sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax[1, 1])
@@ -367,39 +377,49 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     tp = ax[2, 0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
     ax[2, 0].set_ylabel('Stable Rank')
     ax[2, 0].set_xlabel('layers')
-    ax[2, 0].set_title('Stable Rank for network with #neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
-
+    if isinstance(arch, str):
+        ax[2, 0].set_title('{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    else:
+        ax[2, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
 
     tp = ax[2, 1].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
     ax[2, 1].set_ylabel('Spherical Mean Width')
     ax[2, 1].set_xlabel('layers')
-    ax[2, 1].set_title('Spherical Mean Width for network with #neurons:{}, #layers:{}, Polyhedral dim: {}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+    if isinstance(arch, str):
+        ax[2, 1].set_title('{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    else:
+        ax[2, 1].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
 
     tp = ax[3, 0].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
     ax[3, 0].set_ylabel('Spherical Mean Width - v2')
     ax[3, 0].set_xlabel('layers')
-    ax[3, 0].set_title('Spherical Mean Width v2 for network with #neurons:{}, #layers:{}, Polyhedral dim: {}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+    if isinstance(arch, str):
+        ax[3, 0].set_title('{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    else:
+        ax[3, 0].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
 
     tp = ax[3, 1].bar(np.arange(len(cell_dims)), cell_dims)
     ax[3, 1].set_ylabel('dimensions')
     ax[3, 1].set_xlabel('layers')
-    ax[3, 1].set_title('Cell dimensions for network with #neurons:{}, #layers:{}, Polyhedral dim: {}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
-    
+    if isinstance(arch, str):
+        ax[3, 1].set_title('{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    else:
+        ax[3, 1].set_title('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
     fig.savefig(this_path + suffix + 'all_plots.pdf')
     plt.close(fig)
 
-def calc_spherical_mean_width_v2(this_data, num_directions=1e4):
+def calc_spherical_mean_width_v2(this_data, num_directions=1e3):
     directions = np.random.rand(int(num_directions), this_data.shape[1]) # T x D
     directions = np.array(directions, dtype=np.double)
     # directions /= np.sqrt((directions ** 2).sum(-1))[..., np.newaxis]
     directions /= np.sqrt(np.einsum('...i,...i', directions, directions))[..., np.newaxis]
-    mean_width = np.dot(this_data, directions.transpose()) # N x T
+    mean_width = np.matmul(this_data, directions.transpose()) # N x T
 
     mean_width = np.max(mean_width, axis=0) - np.min(mean_width, axis=0)
     return np.mean(mean_width)
 
 
-def covariance_matrix_additional_and_projectional(covariance_matrix, data, result_dict, threshold=1e-7):
+def covariance_matrix_additional_and_projectional(covariance_matrix, result_dict, threshold=1e-7):
     covar_matrix = covariance_matrix.cpu().detach().numpy()
 
     values, vectors = eigh(covar_matrix, eigvals_only=False)
@@ -413,17 +433,21 @@ def covariance_matrix_additional_and_projectional(covariance_matrix, data, resul
 
     result_dict['stable_rank'].append(np.sum(singular_values) / np.max(singular_values))
     result_dict['simple_spherical_mean_width'].append(2 * np.mean(singular_values))
-    result_dict['spherical_mean_width_v2'].append(calc_spherical_mean_width_v2(this_data))
-
-
-    projected_data = np.dot(data, vectors)
-    projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]
 
     result_dict['eigenvectors'].append(vectors)
 
-    result_dict['norms'].append(distance_from_origin(data))
+    return result_dict
 
-    projected_data = np.dot(data, vectors)
+def batch_projectional_analysis(covariance_matrix, data, result_dict):
+    covar_matrix = covariance_matrix.cpu().detach().numpy()
+
+    values, vectors = eigh(covar_matrix, eigvals_only=False)
+
+    result_dict['spherical_mean_width_v2'].append(calc_spherical_mean_width_v2(data))
+
+    projected_data = np.matmul(data, vectors)
+
+    result_dict['norms'].append(distance_from_origin(data))
 
     result_dict['pca_2'].append((projected_data[:, -1], projected_data[:, -2]))
     result_dict['pca_3'].append((projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]))
