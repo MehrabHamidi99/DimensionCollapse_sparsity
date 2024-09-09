@@ -207,8 +207,8 @@ def creat_mnist_data():
     test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 
     # Split the training dataset into training (50,000) and validation (10,000) sets
-    train_size = 50000
-    val_size = 10000
+    train_size = 5000
+    val_size = 1000
     train_indices = list(range(train_size))
     val_indices = list(range(train_size, train_size + val_size))
 

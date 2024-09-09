@@ -11,9 +11,10 @@ class ReluExtractor(nn.Module):
         model.to(device)
         self.activations = []
 
-        for name, layer in self.model.layers.named_modules():
-            if isinstance(layer, nn.ReLU):
-                layer.register_forward_hook(self.get_activation(name))
+        for name, module in model.named_modules():
+            # if isinstance(layer, nn.ReLU):
+            if isinstance(module, nn.Linear):
+                module.register_forward_hook(self.get_activation(name))
 
     def get_activation(self, name):
         def hook(module, input, output):

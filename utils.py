@@ -38,6 +38,10 @@ from scipy import spatial
 
 import itertools
 
+import matplotlib.cm as cm
+from matplotlib.colors import Normalize
+import matplotlib.patches as mpatches
+
 
 def c(m):
     xy = np.dot(m, m.T) # O(k^3)
@@ -247,6 +251,17 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
         ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], c=labels, s=10)
     if dim == 3:
         ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], anim_pieces[counter][2], c=labels, s=10)
+    if labels:
+        legend_labels = np.unique(labels)
+        colormap = cm.get_cmap('viridis', legend_labels.shape[0])  # Color map with 3 colors
+        normalize = Normalize(vmin=0, vmax=2)
+
+        legend_colors = [colormap(normalize(i)) for i in legend_labels]  # Get corresponding colors
+        legend_patches = [mpatches.Patch(color=legend_colors[i], label=f'Class {legend_labels[i]}') for i in range(3)]
+
+        # Add legend to the plot
+        plt.legend(handles=legend_patches, title="Classes")
+
     if type_analysis == 'pca':
         ax.set_xlabel('First Principal Component')
         ax.set_ylabel('Second Principal Component')
