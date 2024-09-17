@@ -6,3 +6,4 @@ __pycache__
 data/*
 data
 main_env/
+debug_res/
