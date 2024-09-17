@@ -4,6 +4,45 @@ import numpy as np
 from DataGenerator import *
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
+from collections import Counter
+
+
+def print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels):
+    # Print dataloader batch shapes
+    print("Train Loader Batch Shapes:")
+    for i, (images, labels) in enumerate(train_loader):
+        print(f"Batch {i+1}: Images Shape = {images.shape}, Labels Shape = {labels.shape}")
+        break  # We only print the shape of the first batch to avoid flooding
+
+    print("\nValidation Loader Batch Shapes:")
+    for i, (images, labels) in enumerate(val_loader):
+        print(f"Batch {i+1}: Images Shape = {images.shape}, Labels Shape = {labels.shape}")
+        break
+
+    print("\nTest Loader Batch Shapes:")
+    for i, (images, labels) in enumerate(test_loader):
+        print(f"Batch {i+1}: Images Shape = {images.shape}, Labels Shape = {labels.shape}")
+        break
+
+    # Print dataset shapes
+    print("\nTrain Samples Shape:", train_samples.shape)
+    print("Train Labels Shape:", train_labels.shape)
+
+    print("\nValidation Samples Shape:", val_samples.shape)
+    print("Validation Labels Shape:", val_labels.shape)
+
+    print("\nTest Samples Shape:", test_samples.shape)
+    print("Test Labels Shape:", test_labels.shape)
+
+    # Compute label frequencies
+    train_label_freq = Counter(train_labels.numpy())
+    val_label_freq = Counter(val_labels.numpy())
+    test_label_freq = Counter(test_labels.numpy())
+
+    # Print label frequencies
+    print("\nTrain Label Frequencies:", train_label_freq)
+    print("Validation Label Frequencies:", val_label_freq)
+    print("Test Label Frequencies:", test_label_freq)
 
 
 def get_mnist_data_loaders_odd_even(batch_size=64):
@@ -64,6 +103,8 @@ def get_mnist_data_loaders_odd_even(batch_size=64):
     val_samples = (val_samples - 0.1307) / 0.3081
     test_samples = (test_samples - 0.1307) / 0.3081
 
+    print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels)
+
     return train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels
 
 
@@ -123,6 +164,8 @@ def get_mnist_data_loaders_three_class(batch_size=64, selected_classes=(0, 1, 2)
     val_samples = (val_samples - 0.1307) / 0.3081
     test_samples = (test_samples - 0.1307) / 0.3081
 
+    print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels)
+
     return train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels
 
 def get_mnist_data_loaders(batch_size=64):
@@ -167,6 +210,8 @@ def get_mnist_data_loaders(batch_size=64):
     train_samples = (train_samples - 0.1307) / 0.3081
     val_samples = (val_samples - 0.1307) / 0.3081
     test_samples = (test_samples - 0.1307) / 0.3081
+
+    print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels)
 
     return train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels
 

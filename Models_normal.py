@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 
 class MLP_simple(nn.Module):
-    def __init__(self, n_in, layer_list, bias=0, init_scale=1):
+    def __init__(self, n_in, layer_list, bias=1e-4, init_scale=1):
         super(MLP_simple, self).__init__()
 
         self.bias = bias

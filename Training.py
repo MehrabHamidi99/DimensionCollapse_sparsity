@@ -49,14 +49,14 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
                 data, target = data.to(device), target.to(device)
                 output = model(data)
                 val_loss += criterion(output, target).item()
-                pred = output.argmax(dim=1, keepdim=True)
+                pred = torch.argmax(torch.exp(output), dim=1)
                 correct += pred.eq(target.view_as(pred)).sum().item()
 
         val_loss /= len(val_loader.dataset)
         accuracy = 100. * correct / len(val_loader.dataset)
 
         # Save model every 10 epochs
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 1 == 0:
             # Create directory for the current set of 10 epochs
             save_dir = base_path + f"epoch_{epoch+1}/"
             if not os.path.exists(save_dir):
@@ -91,7 +91,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
                 data, target = data.to(device), target.to(device)
                 output = model(data)
                 loss += criterion(output, target).item()
-                pred = output.argmax(dim=1, keepdim=True)
+                pred = torch.exp(output).argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
 
         loss /= len(loader.dataset)

@@ -65,10 +65,7 @@ def merge_results(results_dict, new_result_dict):
                     results_dict[k][j] = tmp_res
     return results_dict
 
-def merge_results_batch(results_dict, batch_result_dict, sum_ones=['activations', 'non_zero_activations_layer_wise', 'cell_dimensions', 'batch_cell_dimensions'],
-                                                                    union_ones=['norms'],
-                                                                    union_inside=['pca_2', 'pca_3', 'random_2', 'random_3'],
-                                                                    mean_ones=['spherical_mean_width_v2']):
+def merge_results_batch(results_dict, batch_result_dict, sum_ones=['activations', 'non_zero_activations_layer_wise', 'cell_dimensions', 'batch_cell_dimensions']):
     for k, v in results_dict.items():
         if k in sum_ones:
             try:
@@ -79,27 +76,6 @@ def merge_results_batch(results_dict, batch_result_dict, sum_ones=['activations'
                         results_dict[k][j] = v[j] + batch_result_dict[k][j]             
             except:
                 pass 
-        if k in union_ones:
-            try:
-                for j in range(len(v)):
-                    results_dict[k][j] = np.concatenate((v[j], batch_result_dict[k][j]))         
-            except:
-                pass
-        if k in union_inside:
-            try:
-                for j in range(len(v)):
-                    tmp_res = []
-                    for l in range(len(v[j])):
-                        tmp_res.append(np.concatenate((v[j][l], batch_result_dict[k][j][l])))
-                    results_dict[k][j] = tmp_res
-            except:
-                pass
-        if k in mean_ones:
-            try:
-                for j in range(len(v)):
-                    results_dict[k][j] = (v[j] + batch_result_dict[k][j]) / 2            
-            except:
-                pass
     return results_dict
 
 
@@ -129,10 +105,12 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         batch_data_centered = this_data - torch.mean(this_data, axis=0)
 
         # Compute covariance matrix for this batch
+
         return torch.matmul(batch_data_centered.T, batch_data_centered) / (batch_data_centered.shape[0] - 1)
 
 
-    def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample):
+
+    def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, preds):
 
         new_results = {
             'activations': [],
@@ -140,16 +118,16 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
             'cell_dimensions': [],
             'batch_cell_dimensions': [],
             'nonzero_eigenvalues_count': [],
-            'spherical_mean_width_v2': [],
-            'norms': [],
-            'pca_2': [], 
-            'pca_3': [],
-            'random_2': [],
-            'random_3': [],
+            # 'spherical_mean_width_v2': [],
+            # 'norms': [],
+            # 'pca_2': [], 
+            # 'pca_3': [],
+            # 'random_2': [],
+            # 'random_3': [],
         }
         if not FIRST_BATCH:
             covariance_matrix = covar_calc(sample)
-            new_results = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), new_results)
+            result_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), result_dict, FIRST_BATCH, this_index=0, preds=preds)
 
         for i in range(len(relu_outputs_batch)):
 
@@ -166,12 +144,11 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
             new_results['batch_cell_dimensions'].append(np.min(cell_dim))
 
             covariance_matrix = covar_calc(relu_outputs_batch[i])
+            result_dict = batch_projectional_analysis(covariance_matrix, layer_act, result_dict, first_batch=FIRST_BATCH, this_index=i + 1)
 
             if FIRST_BATCH:
-                result_dict = batch_projectional_analysis(covariance_matrix, layer_act, result_dict)
                 result_dict = add_covar(result_dict, relu_outputs_batch[i], covariance_matrix)
             else:
-                new_results = batch_projectional_analysis(covariance_matrix, layer_act, new_results)
                 result_dict = update_covar(result_dict, relu_outputs_batch[i], covariance_matrix, i + 1)
 
         if FIRST_BATCH:
@@ -212,7 +189,8 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         'random_3': [],
 
         'covar_matrix': [],
-        'this_batch_size': 0
+        'this_batch_size': 0,
+        'labels': []
     }
 
     batch_labels = []
@@ -229,11 +207,15 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         sample = sample.to(device)
         label = label.to(device)
 
-        batch_labels = batch_labels + label.detach().cpu().numpy().tolist()
+        output = torch.exp(model(sample))
+        pred = torch.argmax(output, dim=1)
+        # pred = torch.squeeze(pred).detach().cpu().numpy().tolist()
+        # batch_labels.extend(pred)
+        batch_labels.extend(label.detach().cpu().numpy().tolist())
 
         if FIRST_BATCH:
             covariance_matrix = covar_calc(sample)
-            results_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), results_dict)
+            results_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), results_dict, FIRST_BATCH, this_index=0, preds=pred)
 
             results_dict = add_covar(results_dict, sample, covariance_matrix)
         else:
@@ -242,7 +224,7 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         relu_outputs = hook_forward(feature_extractor, sample, label, device)
         # ـ, relu_outputs = feature_extractor(samples)
 
-        results_dict, FIRST_BATCH = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample)
+        results_dict, FIRST_BATCH = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, pred)
         results_dict['this_batch_size'] = results_dict['this_batch_size'] + sample.shape[0]
 
 
@@ -250,7 +232,7 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
 
     for i in range(len(results_dict['covar_matrix'])):
-        result_dict = covariance_matrix_additional_and_projectional(results_dict['covar_matrix'][i], results_dict)
+        results_dict = covariance_matrix_additional_and_projectional(results_dict['covar_matrix'][i], results_dict, device)
 
     plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 

@@ -308,6 +308,9 @@ def mnist_training_analysis_hook_engine(try_num, archirecture=(784, [256, 128, 6
     fixed_model_batch_analysis(model, test_samples, test_labels, device, '{}_{}'.format(over_path, 'test_'), '784, [256, 128, 64, 32, 10]')
 
     train_model(model, train_loader=train_loader, test_loader=test_loader, base_path=this_path, train_x=train_samples, train_y=train_labels, val_x=val_samples, val_y=val_labels, val_loader=val_loader, test_x=test_samples, test_y=test_labels, epochs=epochs, loss='crossentropy')    
+    
+    create_gif_from_plots(this_path, f'{this_path}/train_plots_animation.gif', plot_type='train')
+    create_gif_from_plots(this_path, f'{this_path}/val_plots_animation.gif', plot_type='val')
 
 
 
