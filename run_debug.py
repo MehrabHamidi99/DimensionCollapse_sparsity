@@ -12,10 +12,51 @@ import time
 from torchvision import datasets, transforms
 
 
+
+import torch
+import torch.nn.functional as F
+
+# # Example small batch with fixed labels 0 0 1 1 2 2 0 0 1 1 2 2
+# fixed_labels = torch.tensor([0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2])
+
+# # Generate random samples for each label (in this case, we use MNIST image size, e.g., 1x28x28)
+# fixed_samples = torch.randn((len(fixed_labels), 1, 28, 28))  # Adjust size as needed for your model
+
+# # Send to device if needed (assuming GPU usage)
+# fixed_samples = fixed_samples
+# fixed_labels = fixed_labels
+
+
 arch = (784, [128, 64, 3])
 
-# mnist_training_analysis_hook_engine(0, pre_path='sept_result_mnist')
-# mnist_training_analysis_hook_engine(0, archirecture=arch, pre_path='sept_result_mnist_three_class', three_class=True)
+# model = MNIST_classifier(n_in=arch[0], layer_list=arch[1], bias=0)
+
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# feature_extractor = ReluExtractor(model, device=device)
+
+
+# # Forward pass through the model
+# output = model(fixed_samples)
+# preds = torch.argmax(F.softmax(output, dim=1), dim=1)
+
+# # Register activations via hooks, or use pre-registered hooks to collect activations
+# relu_outputs = hook_forward(feature_extractor, fixed_samples, fixed_labels, device)
+
+# # Collect activations for each layer
+# for i, activations in enumerate(relu_outputs):
+#     print(f"Layer {i + 1} activations shape: {activations.shape}")
+
+# # Print out the labels and check if activations correspond to the expected pattern
+# print("Fixed Labels: ", fixed_labels.cpu().numpy())
+# print("Predicted Labels: ", preds.cpu().numpy())
+
+# # Optionally, print the first few activations of the batch to verify correspondence
+# for i, activations in enumerate(relu_outputs):
+#     print(f"Layer {i + 1} activations for first few samples: \n{activations[:3].cpu().numpy()}")
+
+
+
 mnist_training_analysis_hook_engine(0, archirecture=arch, pre_path='debug_res', three_class=True, odd_even=False)
 
 

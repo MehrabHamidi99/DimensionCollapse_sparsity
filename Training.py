@@ -67,8 +67,8 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
             print(f"Model saved at epoch {epoch + 1}")
             
             # Call the analysis function and save the results
-            fixed_model_batch_analysis(model, train_x, train_y, device, '{}_{}'.format(save_dir, 'train_'), '784, [256, 128, 64, 32, 10]')
-            fixed_model_batch_analysis(model, val_x, val_y, device, '{}_{}'.format(save_dir, 'val_'), '784, [256, 128, 64, 32, 10]')
+            fixed_model_batch_analysis_one_batch(model, train_x, train_y, device, '{}_{}'.format(save_dir, 'train_'), '784, [256, 128, 64, 32, 10]')
+            fixed_model_batch_analysis_one_batch(model, val_x, val_y, device, '{}_{}'.format(save_dir, 'val_'), '784, [256, 128, 64, 32, 10]')
 
         # Write results to the file
         with open(result_file_path, "a") as f:

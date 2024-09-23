@@ -6,10 +6,10 @@ from FeatureExtractor import *
 def all_analysis_for_hook_engine(relu_outputs,  dataset):
 
     results = {
-        'activations': [],
-        'non_zero_activations_layer_wise' : [],
-        'cell_dimensions': [],
-        'batch_cell_dimensions': [],
+        'activations': [[]],
+        'non_zero_activations_layer_wise' : [0],
+        'cell_dimensions': [0],
+        'batch_cell_dimensions': [0],
         'nonzero_eigenvalues_count': [],
         'eigenvalues': [],
         'stable_rank': [],
@@ -108,8 +108,6 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
         return torch.matmul(batch_data_centered.T, batch_data_centered) / (batch_data_centered.shape[0] - 1)
 
-
-
     def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, preds):
 
         new_results = {
@@ -129,9 +127,15 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
             covariance_matrix = covar_calc(sample)
             result_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), result_dict, FIRST_BATCH, this_index=0, preds=preds)
 
+        results_dict['labels'][0].extend(preds.detach().cpu().numpy().tolist())
+
         for i in range(len(relu_outputs_batch)):
 
             layer_act = relu_outputs_batch[i].detach().cpu().numpy()
+
+            print(f"Layer {i}: Activations shape {layer_act.shape}, Preds length {len(preds)}")
+
+            result_dict['labels'][i + 1].extend(preds.detach().cpu().numpy().tolist())
 
             non_zero = np.sum((layer_act > 0).astype(int), axis=0) # D
 
@@ -190,7 +194,7 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
         'covar_matrix': [],
         'this_batch_size': 0,
-        'labels': []
+        'labels': [[] for _ in range(len(model.layer_list) + 1)]
     }
 
     batch_labels = []
@@ -199,7 +203,7 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
     this_batch_size = min(10000, samples.shape[0])
 
-    data_loader = get_data_loader(samples, labels, batch_size=this_batch_size)
+    data_loader = get_data_loader(samples, labels, batch_size=this_batch_size, shuffle=False)
 
     FIRST_BATCH = True
 
@@ -211,11 +215,11 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         pred = torch.argmax(output, dim=1)
         # pred = torch.squeeze(pred).detach().cpu().numpy().tolist()
         # batch_labels.extend(pred)
-        batch_labels.extend(label.detach().cpu().numpy().tolist())
+        # batch_labels.extend(label.detach().cpu().numpy().tolist())
 
         if FIRST_BATCH:
             covariance_matrix = covar_calc(sample)
-            results_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), results_dict, FIRST_BATCH, this_index=0, preds=pred)
+            results_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), results_dict, FIRST_BATCH, this_index=0, preds=label)
 
             results_dict = add_covar(results_dict, sample, covariance_matrix)
         else:
@@ -224,7 +228,7 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         relu_outputs = hook_forward(feature_extractor, sample, label, device)
         # ـ, relu_outputs = feature_extractor(samples)
 
-        results_dict, FIRST_BATCH = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, pred)
+        results_dict, FIRST_BATCH = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
         results_dict['this_batch_size'] = results_dict['this_batch_size'] + sample.shape[0]
 
 
@@ -236,5 +240,87 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
     plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 
-    plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=batch_labels)
+    plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'])
   
+
+
+
+def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_path, model_status):
+
+    FIRST_BATCH = None
+
+    def covar_calc(this_data):
+        batch_data_centered = this_data - torch.mean(this_data, axis=0)
+        return torch.matmul(batch_data_centered.T, batch_data_centered) / (batch_data_centered.shape[0] - 1)
+
+    def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, labels):
+
+        # Collect activations and labels per layer
+        # For the input layer (layer 0)
+        layer_act_input = sample.detach().cpu().numpy()
+        result_dict['layer_activations'][0].append(layer_act_input)
+        result_dict['layer_labels'][0].extend(labels.detach().cpu().numpy().tolist())
+
+        for i in range(len(relu_outputs_batch)):
+            layer_act = relu_outputs_batch[i].detach().cpu().numpy()
+            result_dict['layer_activations'][i + 1].append(layer_act)
+            result_dict['layer_labels'][i + 1].extend(labels.detach().cpu().numpy().tolist())
+
+        return result_dict
+    
+    # Initialize result_dict with lists to collect activations and labels
+    results_dict = {
+        'layer_activations': [[] for _ in range(len(model.layer_list) + 1)],  # Including input layer
+        'layer_labels': [[] for _ in range(len(model.layer_list) + 1)],
+
+        # 'activations': [],
+        # 'non_zero_activations_layer_wise' : [],
+        # 'cell_dimensions': [],
+        # 'batch_cell_dimensions': [],
+        # 'nonzero_eigenvalues_count': [],
+        # 'eigenvalues': [],
+        # 'stable_rank': [],
+        # 'simple_spherical_mean_width': [],
+        # 'spherical_mean_width_v2': [],
+        # 'norms': [],
+        # 'eigenvectors': [],
+        # 'pca_2': [], 
+        # 'pca_3': [],
+        # 'random_2': [],
+        # 'random_3': [],
+    }
+
+    # Rest of your code remains mostly the same, with adjustments to pass labels
+    feature_extractor = ReluExtractor(model, device=device)
+    this_batch_size = min(10000, samples.shape[0])
+    data_loader = get_data_loader(samples, labels, batch_size=this_batch_size, shuffle=False)
+
+    for sample, label in data_loader:
+        sample = sample.to(device)
+        label = label.to(device)
+
+        output = torch.exp(model(sample))
+        # pred = torch.argmax(output, dim=1)  # Not needed anymore
+
+        relu_outputs = hook_forward(feature_extractor, sample, label, device)
+        results_dict = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
+
+
+    # After processing all batches, concatenate activations and labels per layer
+    for i in range(len(results_dict['layer_activations'])):
+        results_dict['layer_activations'][i] = np.concatenate(results_dict['layer_activations'][i], axis=0)
+        # Labels are already extended as lists
+
+    final_results_dict = all_analysis_for_hook_engine(results_dict['layer_activations'][1:], results_dict['layer_activations'][0])
+    final_results_dict['layer_labels'] = results_dict['layer_labels']
+    final_results_dict['layer_activations'] = results_dict['layer_activations']
+
+    del results_dict
+
+    # Perform PCA and other analyses after aggregation
+    final_results_dict = perform_pca_and_analyses(final_results_dict, device)
+
+    plotting_actions(final_results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
+
+    # Plotting
+    plot_gifs(final_results_dict, this_path=save_path, num=samples.shape[0], pre_path=save_path, labels=final_results_dict['layer_labels'])

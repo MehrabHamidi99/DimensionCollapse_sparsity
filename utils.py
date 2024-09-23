@@ -171,7 +171,7 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
 
 def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=100, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False, zero_one=True, eigens=False, num=1000, norms=False):
     ax.clear()
-    new_act = activation_data[counter]
+    new_act = np.array(activation_data[counter])
     if zero_one:
         new_act = new_act / int(num)
     if eigens:    
@@ -226,19 +226,42 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path=None, sc
         animate_histogram(axs[0, 1], FRAMES_G, eigens, 'layers: ', x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
         animate_histogram(axs[0, 2], FRAMES_G, dist_all, 'layers: ', x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
 
-        plot_data_projection(axs[1, 0], FRAMES_G, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels=labels)
-        plot_data_projection(axs[1, 1], FRAMES_G, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels=labels)
-
+        plot_data_projection(axs[1, 0], FRAMES_G, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+        # plot_data_projection(axs[1, 1], FRAMES_G, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+        
+        # Plot 2D PCA projection
+        plot_data_projection(
+            axs[1, 1],
+            FRAMES_G,
+            result_dict['pca_projections_2d'],
+            labels_all=result_dict['layer_labels'],
+            dim=2,
+            type_analysis='pca',
+            new=True
+        )
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], FRAMES_G, list_pca_3d, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels=labels)
+        plot_data_projection(axs[1, 2], FRAMES_G, list_pca_3d, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], FRAMES_G, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels=labels)
+        # plot_data_projection(axs[1, 3], FRAMES_G, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
+                # Plot 3D PCA projection
+        # axs[1] = plt.subplot(1, 2, 2, projection='3d')
+        plot_data_projection(
+            axs[1, 3],
+            FRAMES_G,
+            result_dict['pca_projections_3d'],
+            labels_all=result_dict['layer_labels'],
+            dim=3,
+            type_analysis='pca',
+            new=True
+        )
+        
+        
         FRAMES_G += 1
 
     # Create animation
-    anim = FuncAnimation(fig, update, frames=len(layer_activation_ratio), repeat=False)
+    anim = FuncAnimation(fig, update, frames=len(layer_activation_ratio) - 1, repeat=False)
 
     # Save the animation
     plt.grid(True)
@@ -254,9 +277,50 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path=None, sc
     plt.close()  # Close the plot to prevent it from displaying statically
 
 
-def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels=None):
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all=None, new=False):
+    if new:
+        ax.clear()
+
+        projections = anim_pieces[counter]
+        labels = labels_all[counter]
+
+        # Ensure the number of data points matches the number of labels
+        assert projections.shape[0] == len(labels), f"Mismatch in data points and labels at layer {counter}"
+
+        # Convert labels to a NumPy array if it's a list
+        labels = np.array(labels)
+
+        # Create a color map based on unique labels
+        unique_labels = np.unique(labels)
+        num_classes = len(unique_labels)
+        cmap = plt.get_cmap('tab10') if num_classes <= 10 else plt.get_cmap('tab20')
+
+        # Map labels to colors
+        colors = [cmap(label / num_classes) for label in labels]
+
+        if dim == 2:
+            ax.scatter(projections[:, 0], projections[:, 1], c=colors, s=10)
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+        elif dim == 3:
+            ax.scatter(projections[:, 0], projections[:, 1], projections[:, 2], c=colors, s=10)
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+            ax.set_zlabel('PC3')
+
+        ax.set_title(f'Layer {counter} PCA Projection')
+        ax.grid(True)
+
+        # Add legend
+        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=cmap(label / num_classes),
+                            markersize=8, label=str(label)) for label in unique_labels]
+        ax.legend(handles=handles, title="Classes", loc="best")
+        return
+
     # eigenvectors_2d = eigenvectors[0]
     ax.clear()
+
+    labels = labels_all[counter]
     
     # Find unique labels and the number of unique classes
     unique_labels = np.unique(labels)
@@ -620,3 +684,23 @@ def create_gif_from_plots(plot_dir, output_gif, plot_type, start_epoch=10, end_e
 
     # Save the frames as a GIF
     frames[0].save(output_gif, format='GIF', append_images=frames[1:], save_all=True, duration=gif_duration, loop=0)
+
+
+def perform_pca_and_analyses(results_dict, device):
+
+    results_dict['pca_projections_2d'] = []
+    results_dict['pca_projections_3d'] = []
+
+    for i in range(len(results_dict['layer_activations'])):
+        activations = results_dict['layer_activations'][i]
+        # Perform PCA for 2D projection
+        pca_2d = PCA(n_components=2)
+        projections_2d = pca_2d.fit_transform(activations)
+        results_dict['pca_projections_2d'].append(projections_2d)
+
+        # Perform PCA for 3D projection
+        pca_3d = PCA(n_components=3)
+        projections_3d = pca_3d.fit_transform(activations)
+        results_dict['pca_projections_3d'].append(projections_3d)
+
+    return results_dict

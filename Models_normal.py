@@ -10,6 +10,8 @@ class MLP_simple(nn.Module):
 
         self.bias = bias
         self.init_scale = init_scale
+
+        self.layer_list = layer_list
         
         self.layers = nn.Sequential()
 
@@ -49,7 +51,9 @@ class MNIST_classifier(nn.Module):
 
         self.bias = bias
         self.init_scale = init_scale
-        
+
+        self.layer_list = layer_list
+
         self.layers = nn.Sequential()
 
         self.layers.add_module(f"linear_{0}", nn.Linear(n_in, layer_list[0]))
@@ -57,7 +61,7 @@ class MNIST_classifier(nn.Module):
         for i in range(len(layer_list) - 1):
             self.layers.add_module(f"linear_{i + 1}", nn.Linear(layer_list[i], layer_list[i + 1]))
             if i < len(layer_list) - 1:
-                self.layers.add_module(f"relu_{i + 1}", nn.ReLU())
+                self.layers.add_module(f"relu_{i + 1}")
 
         self.init_all_weights()
 

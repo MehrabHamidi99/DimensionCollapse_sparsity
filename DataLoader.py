@@ -215,7 +215,7 @@ def get_mnist_data_loaders(batch_size=64):
 
     return train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels
 
-def get_data_loader(X, y, batch_size=32):
+def get_data_loader(X, y, batch_size=32, shuffle=True):
     '''
     Parameters:
     X (numpy.ndarray): Input data.
@@ -236,4 +236,4 @@ def get_data_loader(X, y, batch_size=32):
     tensor_y = torch.Tensor(y)
 
     dataset = TensorDataset(tensor_x, tensor_y)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
