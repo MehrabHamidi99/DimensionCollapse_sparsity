@@ -1,4 +1,5 @@
 from utils import *
+from utils_plotting import *
 from FeatureExtractor import *
 from ForwardPass import *
 from FeatureExtractor import *
@@ -6,10 +7,10 @@ from FeatureExtractor import *
 def all_analysis_for_hook_engine(relu_outputs,  dataset):
 
     results = {
-        'activations': [[]],
-        'non_zero_activations_layer_wise' : [0],
-        'cell_dimensions': [0],
-        'batch_cell_dimensions': [0],
+        'activations': [],
+        'non_zero_activations_layer_wise' : [],
+        'cell_dimensions': [],
+        'batch_cell_dimensions': [],
         'nonzero_eigenvalues_count': [],
         'eigenvalues': [],
         'stable_rank': [],
@@ -270,8 +271,8 @@ def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_pa
     
     # Initialize result_dict with lists to collect activations and labels
     results_dict = {
-        'layer_activations': [[] for _ in range(len(model.layer_list) + 1)],  # Including input layer
-        'layer_labels': [[] for _ in range(len(model.layer_list) + 1)],
+        'layer_activations': [[] for _ in range(len(model.layer_list) + 1 + 1)],  # Including input layer
+        'layer_labels': [[] for _ in range(len(model.layer_list) + 1 + 1)],
 
         # 'activations': [],
         # 'non_zero_activations_layer_wise' : [],
@@ -292,18 +293,27 @@ def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_pa
 
     # Rest of your code remains mostly the same, with adjustments to pass labels
     feature_extractor = ReluExtractor(model, device=device)
-    this_batch_size = min(10000, samples.shape[0])
+    # this_batch_size = min(10000, samples.shape[0])
+    this_batch_size = samples.shape[0]
     data_loader = get_data_loader(samples, labels, batch_size=this_batch_size, shuffle=False)
 
     for sample, label in data_loader:
         sample = sample.to(device)
         label = label.to(device)
 
-        output = torch.exp(model(sample))
+        output = model(sample).detach().cpu().numpy()
         # pred = torch.argmax(output, dim=1)  # Not needed anymore
 
         relu_outputs = hook_forward(feature_extractor, sample, label, device)
+        # a = relu_outputs[-1].detach().cpu().numpy()
         results_dict = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
+        # matches = np.all(a[0] == output, axis=1)
+        # matching_index = np.where(matches)[0]
+        # print(a[0])
+        # print(output[matching_index])
+
+
+
 
 
     # After processing all batches, concatenate activations and labels per layer

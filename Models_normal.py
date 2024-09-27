@@ -60,14 +60,18 @@ class MNIST_classifier(nn.Module):
         self.layers.add_module(f"relu_{0}", nn.ReLU())
         for i in range(len(layer_list) - 1):
             self.layers.add_module(f"linear_{i + 1}", nn.Linear(layer_list[i], layer_list[i + 1]))
-            if i < len(layer_list) - 1:
-                self.layers.add_module(f"relu_{i + 1}")
+            if i < len(layer_list) - 2:
+                self.layers.add_module(f"relu_{i + 1}", nn.ReLU())
+        
+        self.log_softmax = nn.LogSoftmax(dim=1)
+
 
         self.init_all_weights()
 
     def forward(self, x):
         output = self.layers(x.view(-1, 784))
-        return F.log_softmax(output, dim=1)
+        output = self.log_softmax(output)
+        return output
     
     def init_all_weights(self):
         self.apply(self.init_weights)

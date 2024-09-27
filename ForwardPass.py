@@ -7,7 +7,7 @@ from utils import *
 
 def hook_forward(extractor, dataset, labels, device):
 
-    data_loader = get_data_loader(dataset, labels, batch_size=dataset.shape[0])
+    data_loader = get_data_loader(dataset, labels, batch_size=dataset.shape[0], shuffle=False)
     
     for x, _ in data_loader:
         x.to(device)

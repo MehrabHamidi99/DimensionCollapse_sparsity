@@ -12,7 +12,7 @@ class ReluExtractor(nn.Module):
 
         for name, module in model.named_modules():
             # if isinstance(module, nn.ReLU):
-            if isinstance(module, nn.Linear):
+            if isinstance(module, nn.Linear) or isinstance(module, nn.LogSoftmax):
                 module.register_forward_hook(self.get_activation())
 
     def get_activation(self):

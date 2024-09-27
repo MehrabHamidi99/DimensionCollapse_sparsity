@@ -26,6 +26,7 @@ import torch.nn.functional as F
 # fixed_samples = fixed_samples
 # fixed_labels = fixed_labels
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 arch = (784, [128, 64, 3])
 
