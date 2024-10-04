@@ -1,4 +1,5 @@
 from utils import *
+from utils import calc_spherical_mean_width_v2
 import pandas as pd
 import numpy as np
 np.random.seed(33)
@@ -49,6 +50,8 @@ import matplotlib.patches as mpatches
 import os
 from PIL import Image, ImageDraw, ImageFont
 
+import gc
+
 
 def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_title='Activation Value', save_path='activation_animation.gif', bins=100, fps=1, pre_path='', fixed_scale=False, custom_range=20, step=False, zero_one=True, eigens=False, num=1000, norms=False):
     ax.cla()
@@ -86,7 +89,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
     ax.set_ylabel('Frequency')
 
 
-def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path=None, scale=None, eigenvectors=None, labels=None):
+def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = []):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d =\
           result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
@@ -103,83 +106,89 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path=None, sc
         animate_histogram(axs[0, 2], frame, dist_all, 'layers: ', x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
 
         plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
-        # plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
         
         # Plot 2D PCA projection
-        plot_data_projection(
-            axs[1, 1],
-            frame,
-            result_dict['pca_projections_2d'],
-            labels_all=result_dict['layer_labels'],
-            dim=2,
-            type_analysis='pca',
-            new=True
-        )
+        # plot_data_projection(
+        #     axs[1, 1],
+        #     frame,
+        #     result_dict['pca_projections_2d'],
+        #     labels_all=result_dict['layer_labels'],
+        #     dim=2,
+        #     type_analysis='pca',
+        #     new=True
+        # )
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
         plot_data_projection(axs[1, 2], frame, list_pca_3d, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        # plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
+        plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
                 # Plot 3D PCA projection
         # axs[1] = plt.subplot(1, 2, 2, projection='3d')
-        plot_data_projection(
-            axs[1, 3],
-            frame,
-            result_dict['pca_projections_3d'],
-            labels_all=result_dict['layer_labels'],
-            dim=3,
-            type_analysis='pca',
-            new=True
-        )
+        # plot_data_projection(
+        #     axs[1, 3],
+        #     frame,
+        #     result_dict['pca_projections_3d'],
+        #     labels_all=result_dict['layer_labels'],
+        #     dim=3,
+        #     type_analysis='pca',
+        #     new=True
+        # )
         
         plt.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
+        # plt.close()
 
-    def create_gif_from_images(image_dir, output_gif_path, duration=500):
-
-        # Function to extract the layer index from the filename
-        def get_layer_index(filename):
-            base = os.path.basename(filename)
-            # Split the filename to extract the index
-            # Assuming filename is like '0_layer.png' or '.../0_layer.png'
-            parts = base.split('_')
-            if parts and parts[0].isdigit():
-                return int(parts[0])
-            else:
-                return -1  # Default value for sorting non-matching files
+    # del layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, fig, axs
+    # gc.collect()
 
     
-        # Get list of image file paths in the directory
-        image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('.png')]
 
-        # Sort the images based on the extracted layer index
-        image_files_sorted = sorted(
-            image_files,
-            key=lambda x: get_layer_index(x)
-        )
-
-        images = [Image.open(img) for img in image_files_sorted]
-
-        # Save as GIF
-        images[0].save(
-            output_gif_path,
-            save_all=True,
-            append_images=images[1:],
-            duration=duration,
-            loop=0
-        )
-
-    create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
+    _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
 
 
-def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all=None, new=False):
+def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
+
+    # Function to extract the layer index from the filename
+    def get_layer_index(filename):
+        base = os.path.basename(filename)
+        # Split the filename to extract the index
+        # Assuming filename is like '0_layer.png' or '.../0_layer.png'
+        parts = base.split('_')
+        if parts and parts[0].isdigit():
+            return int(parts[0])
+        else:
+            return -1  # Default value for sorting non-matching files
+
+
+    # Get list of image file paths in the directory
+    image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('.png')]
+
+    # Sort the images based on the extracted layer index
+    image_files_sorted = sorted(
+        image_files,
+        key=lambda x: get_layer_index(x)
+    )
+
+    images = [Image.open(img) for img in image_files_sorted]
+
+    # Save as GIF
+    images[0].save(
+        output_gif_path,
+        save_all=True,
+        append_images=images[1:],
+        duration=duration,
+        loop=0
+    )
+
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all: list = [], new=False):
     # print(counter)
     ax.cla()
 
     if new:
 
         projections = anim_pieces[counter]
-        labels = labels_all[counter]
+        labels = labels_all[0]
 
         # Ensure the number of data points matches the number of labels
         assert projections.shape[0] == len(labels), f"Mismatch in data points and labels at layer {counter}"
@@ -190,7 +199,7 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
         # Create a color map based on unique labels
         unique_labels = np.unique(labels)
         num_classes = len(unique_labels)
-        cmap = plt.get_cmap('tab10') if num_classes <= 10 else plt.get_cmap('tab20')
+        cmap = plt.get_cmap('tab10') if num_classes <= 10 else plt.get_cmap('tab20') # type: ignore
 
         # Map labels to colors
         colors = [cmap(label / num_classes) for label in labels]
@@ -209,7 +218,7 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
         ax.grid(True)
 
         # Add legend
-        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=cmap(label / num_classes),
+        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=cmap(label / num_classes), # type: ignore
                             markersize=8, label=str(label)) for label in unique_labels]
         ax.legend(handles=handles, title="Classes", loc="best")
         return
@@ -217,7 +226,7 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     # eigenvectors_2d = eigenvectors[0]
     # ax.clear()
 
-    labels = labels_all[counter]
+    labels = labels_all[0]
     
     # Find unique labels and the number of unique classes
     unique_labels = np.unique(labels)
@@ -225,11 +234,11 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     
     # Dynamically select an appropriate colormap
     if num_classes <= 10:
-        cmap = plt.get_cmap('tab10')  # Use tab10 for 10 or fewer classes
+        cmap = plt.get_cmap('tab10')  # type: ignore # Use tab10 for 10 or fewer classes
     elif num_classes <= 20:
-        cmap = plt.get_cmap('tab20')  # Use tab20 for 11-20 classes
+        cmap = plt.get_cmap('tab20')  # type: ignore # Use tab20 for 11-20 classes
     else:
-        cmap = plt.cm.get_cmap('viridis', num_classes)  # Use continuous colormap for more than 20 classes
+        cmap = plt.cm.get_cmap('viridis', num_classes)  # type: ignore # Use continuous colormap for more than 20 classes
     
     # Map each unique label to a specific color in the colormap
     color_map = {label: cmap(i / num_classes) for i, label in enumerate(unique_labels)}
@@ -246,7 +255,7 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     # If labels are provided, add a legend
     if labels is not None:
         # Create a list of legend handles
-        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[label], 
+        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[label],  # type: ignore
                               markersize=8, label=f'Class {label}') for label in unique_labels]
         
         # Add the legend to the axis
@@ -277,6 +286,8 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
         ax.set_title(title[counter])
     else:
         ax.set_title(f'{title} {counter + 1}')
+
+    # del ax
     # if costume_range:
     #     ax.set_ylim(-1 * costume_range, costume_range)
     #     ax.set_xlim(-1 * costume_range, costume_range)
@@ -360,25 +371,25 @@ def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batc
 
     def get_projected_data(result_dict, projected_data, data):
         if data.shape[1] > 3:
-            result_dict['pca_2'][this_index][0].extend(projected_data[:, -1])
-            result_dict['pca_2'][this_index][1].extend(projected_data[:, -2])
+            result_dict['pca_2'][this_index][0].extend(projected_data[:, -1].cpu().detach().numpy())
+            result_dict['pca_2'][this_index][1].extend(projected_data[:, -2].cpu().detach().numpy())
             
-            result_dict['pca_3'][this_index][0].extend(projected_data[:, -1])
-            result_dict['pca_3'][this_index][1].extend(projected_data[:, -2])
-            result_dict['pca_3'][this_index][2].extend(projected_data[:, -3])
+            result_dict['pca_3'][this_index][0].extend(projected_data[:, -1].cpu().detach().numpy())
+            result_dict['pca_3'][this_index][1].extend(projected_data[:, -2].cpu().detach().numpy())
+            result_dict['pca_3'][this_index][2].extend(projected_data[:, -3].cpu().detach().numpy())
 
             random_dims  = random.sample(set(list(range(0, data.shape[1]))), 2)
-            result_dict['random_2'][this_index][0].extend(data[0:data.shape[0], random_dims[0]])
-            result_dict['random_2'][this_index][1].extend(data[0:data.shape[0], random_dims[1]])
+            result_dict['random_2'][this_index][0].extend(data[0:data.shape[0], random_dims[0]].cpu().detach().numpy())
+            result_dict['random_2'][this_index][1].extend(data[0:data.shape[0], random_dims[1]].cpu().detach().numpy())
 
             random_dims  = random.sample(set(list(range(0, data.shape[1]))), 3)
-            result_dict['random_3'][this_index][0].extend(data[0:data.shape[0], random_dims[0]])
-            result_dict['random_3'][this_index][1].extend(data[0:data.shape[0], random_dims[1]])
-            result_dict['random_3'][this_index][2].extend(data[0:data.shape[0], random_dims[2]])
+            result_dict['random_3'][this_index][0].extend(data[0:data.shape[0], random_dims[0]].cpu().detach().numpy())
+            result_dict['random_3'][this_index][1].extend(data[0:data.shape[0], random_dims[1]].cpu().detach().numpy())
+            result_dict['random_3'][this_index][2].extend(data[0:data.shape[0], random_dims[2]].cpu().detach().numpy())
         elif data.shape[1] == 3:
 
-            result_dict['pca_2'][this_index][0].extend(projected_data[:, -1])
-            result_dict['pca_2'][this_index][1].extend(projected_data[:, -2])
+            result_dict['pca_2'][this_index][0].extend(projected_data[:, -1].cpu().detach().numpy())
+            result_dict['pca_2'][this_index][1].extend(projected_data[:, -2].cpu().detach().numpy())
 
             random_dims  = random.sample(set(list(range(0, data.shape[1]))), 2)
             result_dict['random_2'][this_index][0].extend(data[:, 0])
@@ -423,11 +434,11 @@ def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batc
 
         return result_dict
 
-    covar_matrix = covariance_matrix.cpu().detach().numpy()
+    # covar_matrix = covariance_matrix.cpu().detach().numpy()
 
-    values, vectors = eigh(covar_matrix, eigvals_only=False)
+    values, vectors = torch.linalg.eigh(covariance_matrix)
 
-    projected_data = np.matmul(data, vectors)
+    projected_data = torch.matmul(data, vectors)
 
     if first_batch:
         result_dict['pca_2'].append(([], []))
@@ -440,16 +451,20 @@ def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batc
     # if preds is not None:
     #     result_dict['labels'].extend(preds)
         
-    result_dict['spherical_mean_width_v2'][this_index] = (result_dict['spherical_mean_width_v2'][this_index] + calc_spherical_mean_width_v2(data)) / 2.0
+    result_dict['spherical_mean_width_v2'][this_index] = (result_dict['spherical_mean_width_v2'][this_index] + calc_spherical_mean_width_v2(data).detach().cpu().numpy()) / 2.0
 
-    result_dict['norms'][this_index].extend(distance_from_origin(data).tolist())
+    result_dict['norms'][this_index].extend(distance_from_origin(data).detach().cpu().numpy().tolist())
 
     result_dict = get_projected_data(result_dict, projected_data, data)
+
+    del values, vectors
+    gc.collect()
+
 
     return result_dict
 
 
-def create_gif_from_plots(plot_dir, output_gif, plot_type, start_epoch=10, end_epoch=100, step=10, gif_duration=500):
+def create_gif_from_plots(plot_dir, output_gif, plot_type, start_epoch=10, end_epoch=100, step=10, gif_duration=1500):
     frames = []
     font = ImageFont.load_default()  # You can replace this with a path to a font file if you need a custom font
 
@@ -463,7 +478,7 @@ def create_gif_from_plots(plot_dir, output_gif, plot_type, start_epoch=10, end_e
         # Add epoch title to the plot
         draw = ImageDraw.Draw(img)
         text = f"Epoch {epoch} - {plot_type.capitalize()}"
-        text_width, text_height = draw.textsize(text, font=font)
+        text_width, text_height = draw.textsize(text, font=font) # type: ignore
         draw.text(((img.width - text_width) // 2, 10), text, font=font, fill="white")
 
         # Append the frame to the list
@@ -538,3 +553,9 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
+
+# def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path, costume_range=10):
+#     plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path, costume_range=costume_range)
+#     plot_data_projection(list_pca_3d, type_analysis='pca', dim=3, save_path='data_pca_3d.gif', pre_path=pre_path, costume_range=costume_range)
+#     plot_data_projection(list_random_2d, type_analysis='random', dim=2, save_path='data_random_2d.gif', pre_path=pre_path, costume_range=costume_range)
+#     plot_data_projection(list_random_3d, type_analysis='random', dim=3, save_path='data_random_3d.gif', pre_path=pre_path, costume_range=costume_range)

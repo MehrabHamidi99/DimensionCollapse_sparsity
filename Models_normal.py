@@ -8,6 +8,8 @@ class MLP_simple(nn.Module):
     def __init__(self, n_in, layer_list, bias=1e-4, init_scale=1):
         super(MLP_simple, self).__init__()
 
+        self.n_in = n_in
+
         self.bias = bias
         self.init_scale = init_scale
 
@@ -46,8 +48,10 @@ class MLP_simple(nn.Module):
 
 
 class MNIST_classifier(nn.Module):
-    def __init__(self, n_in=784, layer_list=[256, 128, 64, 32, 10], bias=0, init_scale=1):
+    def __init__(self, n_in=784, layer_list=[256, 128, 64, 32, 10], bias=0.0, init_scale=1):
         super(MNIST_classifier, self).__init__()
+
+        self.n_in = n_in
 
         self.bias = bias
         self.init_scale = init_scale
@@ -69,7 +73,7 @@ class MNIST_classifier(nn.Module):
         self.init_all_weights()
 
     def forward(self, x):
-        output = self.layers(x.view(-1, 784))
+        output = self.layers(x.view(-1, self.n_in))
         output = self.log_softmax(output)
         return output
     

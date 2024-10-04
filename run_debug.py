@@ -28,7 +28,7 @@ import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-arch = (784, [128, 64, 3])
+arch = (784, [128, 64, 100])
 
 # model = MNIST_classifier(n_in=arch[0], layer_list=arch[1], bias=0)
 
@@ -58,7 +58,7 @@ arch = (784, [128, 64, 3])
 
 
 
-mnist_training_analysis_hook_engine(0, archirecture=arch, pre_path='debug_res', three_class=True, odd_even=False)
+cifar100_training_analysis_hook_engine(11, pre_path='debug_res', debug=True)
 
 
 # mnist_training_analysis_hook_engine(0, archirecture=(784, [256, 128, 64, 32, 10]), pre_path='sept_result_mnist_three_class', three_class=True)

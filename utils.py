@@ -45,8 +45,6 @@ import matplotlib.patches as mpatches
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-from utils_plotting import *
-
 def c(m):
     xy = np.dot(m, m.T) # O(k^3)
     x2 = y2 = (m * m).sum(1) #O(k^2)
@@ -56,10 +54,10 @@ def c(m):
     # return np.sqrt(d2)  # O (k^2)
 
 def distance_from_origin(vect):
-    if torch.is_tensor(vect):
-        vect_cop = vect.cpu().clone().detach().numpy()
-        return np.sqrt(np.sum(((vect_cop - np.zeros(vect_cop.shape)) ** 2), axis=1))
-    return np.sqrt(np.sum(((vect - np.zeros(vect.shape)) ** 2), axis=1))
+    # if torch.is_tensor(vect):
+    #     # vect_cop = vect.cpu().clone().detach().numpy()
+    #     return torch.sqrt(torch.sum(((vect_cop - torch.zeros(vect_cop.shape)) ** 2), axis=1))
+    return torch.sqrt(torch.sum(((vect - torch.zeros(vect.shape, dtype=vect.dtype, device=vect.device)) ** 2), dim=1))
 
 def get_pc_components(data, n_components=2):
     data = data - np.mean(data)
@@ -149,14 +147,31 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
     return this_path
 
 def calc_spherical_mean_width_v2(this_data, num_directions=1e3):
-    directions = np.random.rand(int(num_directions), this_data.shape[1]) # T x D
-    directions = np.array(directions, dtype=np.double)
-    # directions /= np.sqrt((directions ** 2).sum(-1))[..., np.newaxis]
-    directions /= np.sqrt(np.einsum('...i,...i', directions, directions))[..., np.newaxis]
-    mean_width = np.matmul(this_data, directions.transpose()) # N x T
+    """
+    Calculate the spherical mean width of the given data using random directions.
 
-    mean_width = np.max(mean_width, axis=0) - np.min(mean_width, axis=0)
-    return np.mean(mean_width)
+    Args:
+        this_data (torch.Tensor): Input data of shape (N, D), where N is the number of samples
+                                  and D is the dimensionality.
+        num_directions (int, optional): Number of random directions to sample. Defaults to 1000.
+
+    Returns:
+        torch.Tensor: The mean spherical width.
+    """
+    # Ensure num_directions is an integer
+    num_directions = int(num_directions)
+    
+    # Generate random directions uniformly in [0, 1) and convert to double precision
+    directions = torch.rand(num_directions, this_data.shape[1], dtype=this_data.dtype, device=this_data.device)  # Shape: (T, D)
+    # Normalize each direction to lie on the unit sphere
+    directions = directions / directions.norm(dim=1, keepdim=True)  # Shape: (T, D)
+    # Compute the projection of data onto each direction
+    # this_data: (N, D), directions.t(): (D, T) -> mean_width: (N, T)
+    mean_width = torch.matmul(this_data, directions.t())  # Shape: (N, T)
+    # Calculate the width for each direction by finding the range of projections
+    width = torch.max(mean_width, dim=0).values - torch.min(mean_width, dim=0).values  # Shape: (T,)
+    # Compute the mean width across all directions
+    return width.mean()
 
 
 def covariance_matrix_additional_and_projectional(covariance_matrix, result_dict, device, threshold=1e-7):
@@ -208,13 +223,6 @@ def projection_analysis_for_full_data(this_data, results, return_eigenvalues=Tru
     results['random_3'].append(projection_analysis(this_data, 'random', 3))
 
     return results
-
-def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path, costume_range=10):
-    plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path, costume_range=costume_range)
-    plot_data_projection(list_pca_3d, type_analysis='pca', dim=3, save_path='data_pca_3d.gif', pre_path=pre_path, costume_range=costume_range)
-    plot_data_projection(list_random_2d, type_analysis='random', dim=2, save_path='data_random_2d.gif', pre_path=pre_path, costume_range=costume_range)
-    plot_data_projection(list_random_3d, type_analysis='random', dim=3, save_path='data_random_3d.gif', pre_path=pre_path, costume_range=costume_range)
-
 
 def perform_pca_and_analyses(results_dict, device):
 

@@ -3,6 +3,8 @@ from utils_plotting import *
 from FeatureExtractor import *
 from ForwardPass import *
 from FeatureExtractor import *
+import ctypes
+import gc
 
 def all_analysis_for_hook_engine(relu_outputs,  dataset):
 
@@ -96,84 +98,10 @@ def generate_heatmap_from_the_activation_list(layer_activations):
 
     return heatmap_data
 
-
-
-def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status):
+@torch.no_grad
+def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000):
 
     FIRST_BATCH = None
-
-    def covar_calc(this_data):
-        batch_data_centered = this_data - torch.mean(this_data, axis=0)
-
-        # Compute covariance matrix for this batch
-
-        return torch.matmul(batch_data_centered.T, batch_data_centered) / (batch_data_centered.shape[0] - 1)
-
-    def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, preds):
-
-        new_results = {
-            'activations': [],
-            'non_zero_activations_layer_wise' : [],
-            'cell_dimensions': [],
-            'batch_cell_dimensions': [],
-            'nonzero_eigenvalues_count': [],
-            # 'spherical_mean_width_v2': [],
-            # 'norms': [],
-            # 'pca_2': [], 
-            # 'pca_3': [],
-            # 'random_2': [],
-            # 'random_3': [],
-        }
-        if not FIRST_BATCH:
-            covariance_matrix = covar_calc(sample)
-            result_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), result_dict, FIRST_BATCH, this_index=0, preds=preds)
-
-        results_dict['labels'][0].extend(preds.detach().cpu().numpy().tolist())
-
-        for i in range(len(relu_outputs_batch)):
-
-            layer_act = relu_outputs_batch[i].detach().cpu().numpy()
-
-            print(f"Layer {i}: Activations shape {layer_act.shape}, Preds length {len(preds)}")
-
-            result_dict['labels'][i + 1].extend(preds.detach().cpu().numpy().tolist())
-
-            non_zero = np.sum((layer_act > 0).astype(int), axis=0) # D
-
-            new_results['activations'].append(non_zero)
-            new_results['non_zero_activations_layer_wise'].append(np.sum((non_zero > 0).astype(int)))
-
-            cell_dim = np.sum((layer_act > 0).astype(int), axis=1) # B
-
-            new_results['cell_dimensions'].append(cell_dim)
-            new_results['batch_cell_dimensions'].append(np.min(cell_dim))
-
-            covariance_matrix = covar_calc(relu_outputs_batch[i])
-            result_dict = batch_projectional_analysis(covariance_matrix, layer_act, result_dict, first_batch=FIRST_BATCH, this_index=i + 1)
-
-            if FIRST_BATCH:
-                result_dict = add_covar(result_dict, relu_outputs_batch[i], covariance_matrix)
-            else:
-                result_dict = update_covar(result_dict, relu_outputs_batch[i], covariance_matrix, i + 1)
-
-        if FIRST_BATCH:
-            FIRST_BATCH = False
-        return merge_results_batch(result_dict, new_results), FIRST_BATCH
-
-    def update_covar(result_dict, this_data, covar_matrix, i):
-
-        # Store covariance matrix and batch size
-        result_dict['covar_matrix'][i] = (result_dict['covar_matrix'][i] * result_dict['this_batch_size'] +\
-              covar_matrix * this_data.shape[0]) / (result_dict['this_batch_size'] + this_data.shape[0])
-        return result_dict
-
-
-    def add_covar(result_dict, this_data, covar_matrix):
-
-        result_dict['covar_matrix'].append(covar_matrix)
-
-        return result_dict
-
 
     results_dict = {
 
@@ -195,14 +123,14 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
         'covar_matrix': [],
         'this_batch_size': 0,
-        'labels': [[] for _ in range(len(model.layer_list) + 1)]
+        'labels': [[]] # init layer, softmax
     }
 
     batch_labels = []
 
     feature_extractor = ReluExtractor(model, device=device)
 
-    this_batch_size = min(10000, samples.shape[0])
+    this_batch_size = min(batch_size, samples.shape[0])
 
     data_loader = get_data_loader(samples, labels, batch_size=this_batch_size, shuffle=False)
 
@@ -212,24 +140,29 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         sample = sample.to(device)
         label = label.to(device)
 
-        output = torch.exp(model(sample))
-        pred = torch.argmax(output, dim=1)
-        # pred = torch.squeeze(pred).detach().cpu().numpy().tolist()
+        with torch.no_grad():
+
+            output = model(sample)
+            pred = torch.argmax(output, dim=1)
+            # pred = torch.squeeze(pred).detach().cpu().numpy().tolist()
         # batch_labels.extend(pred)
         # batch_labels.extend(label.detach().cpu().numpy().tolist())
 
-        if FIRST_BATCH:
-            covariance_matrix = covar_calc(sample)
-            results_dict = batch_projectional_analysis(covariance_matrix, sample.detach().cpu().numpy(), results_dict, FIRST_BATCH, this_index=0, preds=label)
+        sample_ = sample.view(sample.shape[0], -1)
 
-            results_dict = add_covar(results_dict, sample, covariance_matrix)
+        if FIRST_BATCH:
+            covariance_matrix = _covar_calc(sample_)
+            results_dict = batch_projectional_analysis(covariance_matrix, sample_, results_dict, FIRST_BATCH, this_index=0, preds=pred)
+
+            results_dict = _add_covar(results_dict, sample_, covariance_matrix)
         else:
-            results_dict = update_covar(results_dict, sample, covariance_matrix, 0)
+            results_dict = _update_covar(results_dict, sample_, covariance_matrix, 0)
 
         relu_outputs = hook_forward(feature_extractor, sample, label, device)
         # ـ, relu_outputs = feature_extractor(samples)
 
-        results_dict, FIRST_BATCH = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
+        results_dict, FIRST_BATCH, new_labels = _on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample_, pred)
+        results_dict['labels'][0].extend(label.detach().cpu().numpy())
         results_dict['this_batch_size'] = results_dict['this_batch_size'] + sample.shape[0]
 
 
@@ -242,17 +175,100 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
     plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 
     plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'])
-  
+    
+    # Empty the GPU cache
+    del results_dict, relu_outputs, data_loader, feature_extractor
+    gc.collect()
 
+    torch.cuda.empty_cache()
+    libc = ctypes.CDLL("libc.so.6")
+    libc.malloc_trim(0)
+
+
+@torch.no_grad
+def _covar_calc(this_data):
+    new_data = this_data
+
+    batch_data_centered = new_data - torch.mean(new_data, axis=0)
+
+    # Compute covariance matrix for this batch
+    return torch.matmul(batch_data_centered.T, batch_data_centered) / (batch_data_centered.shape[0] - 1)
+
+@torch.no_grad
+def _on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, preds):
+
+    new_results = {
+        'activations': [],
+        'non_zero_activations_layer_wise' : [],
+        'cell_dimensions': [],
+        'batch_cell_dimensions': [],
+        'nonzero_eigenvalues_count': [],
+        # 'spherical_mean_width_v2': [],
+        # 'norms': [],
+        # 'pca_2': [], 
+        # 'pca_3': [],
+        # 'random_2': [],
+        # 'random_3': [],
+    }
+    if not FIRST_BATCH:
+        covariance_matrix = _covar_calc(sample)
+        result_dict = batch_projectional_analysis(covariance_matrix, sample, result_dict, FIRST_BATCH, this_index=0, preds=preds)
+
+    new_labels = preds.detach().cpu().numpy().tolist()
+
+    for i in range(len(relu_outputs_batch)):
+
+        # layer_act = relu_outputs_batch[i].detach().cpu().numpy()
+        layer_act = relu_outputs_batch[i]
+
+        if len(layer_act.shape) == 3:
+            layer_act = torch.mean(layer_act, dim=1).view(layer_act.shape[0], -1)
+        if len(layer_act.shape) > 3:
+            layer_act = layer_act.view(layer_act.shape[0], -1)
+
+        # result_dict['labels'][i + 1].extend(preds.detach().cpu().numpy().tolist())
+
+        non_zero = torch.sum((layer_act > 0).detach().cpu().int(), axis=0) # type: ignore # D
+
+        new_results['activations'].append(non_zero.numpy())
+        new_results['non_zero_activations_layer_wise'].append(torch.sum((non_zero > 0).detach().cpu().int()).numpy())
+
+        cell_dim = torch.sum((layer_act > 0).detach().cpu().int(), axis=1) # type: ignore # B
+
+        new_results['cell_dimensions'].append(cell_dim)
+        new_results['batch_cell_dimensions'].append(torch.min(cell_dim).numpy())
+
+        covariance_matrix = _covar_calc(layer_act)
+        result_dict = batch_projectional_analysis(covariance_matrix, layer_act, result_dict, first_batch=FIRST_BATCH, this_index=i + 1)
+
+        if FIRST_BATCH:
+            result_dict = _add_covar(result_dict, relu_outputs_batch[i], covariance_matrix)
+        else:
+            result_dict = _update_covar(result_dict, relu_outputs_batch[i], covariance_matrix, i + 1)
+
+    if FIRST_BATCH:
+        FIRST_BATCH = False
+    return merge_results_batch(result_dict, new_results), FIRST_BATCH, new_labels
+
+@torch.no_grad
+def _update_covar(result_dict, this_data, covar_matrix, i):
+
+    # Store covariance matrix and batch size
+    result_dict['covar_matrix'][i] = (result_dict['covar_matrix'][i] * result_dict['this_batch_size'] +\
+            covar_matrix * this_data.shape[0]) / (result_dict['this_batch_size'] + this_data.shape[0])
+    return result_dict
+
+@torch.no_grad
+def _add_covar(result_dict, this_data, covar_matrix):
+
+    result_dict['covar_matrix'].append(covar_matrix)
+
+    return result_dict
 
 
 def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_path, model_status):
 
     FIRST_BATCH = None
-
-    def covar_calc(this_data):
-        batch_data_centered = this_data - torch.mean(this_data, axis=0)
-        return torch.matmul(batch_data_centered.T, batch_data_centered) / (batch_data_centered.shape[0] - 1)
 
     def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, labels):
 
@@ -293,8 +309,8 @@ def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_pa
 
     # Rest of your code remains mostly the same, with adjustments to pass labels
     feature_extractor = ReluExtractor(model, device=device)
-    # this_batch_size = min(10000, samples.shape[0])
-    this_batch_size = samples.shape[0]
+    this_batch_size = min(10000, samples.shape[0])
+    # this_batch_size = samples.shape[0]
     data_loader = get_data_loader(samples, labels, batch_size=this_batch_size, shuffle=False)
 
     for sample, label in data_loader:
@@ -305,15 +321,7 @@ def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_pa
         # pred = torch.argmax(output, dim=1)  # Not needed anymore
 
         relu_outputs = hook_forward(feature_extractor, sample, label, device)
-        # a = relu_outputs[-1].detach().cpu().numpy()
         results_dict = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
-        # matches = np.all(a[0] == output, axis=1)
-        # matching_index = np.where(matches)[0]
-        # print(a[0])
-        # print(output[matching_index])
-
-
-
 
 
     # After processing all batches, concatenate activations and labels per layer
@@ -334,3 +342,5 @@ def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_pa
 
     # Plotting
     plot_gifs(final_results_dict, this_path=save_path, num=samples.shape[0], pre_path=save_path, labels=final_results_dict['layer_labels'])
+    del final_results_dict
+    del relu_outputs, data_loader
