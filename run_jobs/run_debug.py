@@ -1,11 +1,16 @@
-import os
+# import sys
+# sys.path.append('../.')
 
-from Experiments import *
+import os, sys; sys.path.append(os.path.dirname(os.path.realpath(f'{__file__}/..')))
+
+print(sys.path)
+
+from Training.Experiments import *
 from tqdm import tqdm
-from Models import *
+from Models.Models import *
 from utils import *
-from DataGenerator import *
-from DataLoader import *
+from Data.DataGenerator import *
+from Data.DataLoader import *
 
 import time
 

@@ -1,11 +1,11 @@
 import torch
 from torch.utils.data import TensorDataset, DataLoader, Dataset
 import numpy as np
-from DataGenerator import *
+from Data.DataGenerator import *
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
 from collections import Counter
-from Datasets import *
+from Data.Datasets import *
 
 def print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels):
     # Print dataloader batch shapes

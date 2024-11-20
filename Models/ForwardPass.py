@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from DataLoader import *
+from Data.DataLoader import *
 from utils import *
 
 

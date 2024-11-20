@@ -2,8 +2,8 @@ import torch
 from torch.utils.data import DataLoader
 
 import torch
-from DataLoader import get_simple_data_loader, get_data_loader
-from ForwardPass import *
+from Data.DataLoader import get_simple_data_loader, get_data_loader
+from Models.ForwardPass import *
 
 
 # Compute NC1

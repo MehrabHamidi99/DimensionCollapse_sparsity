@@ -1,8 +1,7 @@
 from utils import *
 from utils_plotting import *
-from FeatureExtractor import *
-from ForwardPass import *
-from FeatureExtractor import *
+from Models.FeatureExtractor import *
+from Models.ForwardPass import *
 import ctypes
 import gc
 

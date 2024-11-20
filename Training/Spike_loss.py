@@ -6,8 +6,8 @@ import itertools
 from sklearn.linear_model import RANSACRegressor
 
 import torch
-from DataLoader import get_simple_data_loader, get_data_loader
-from ForwardPass import hook_forward_train
+from Data.DataLoader import get_simple_data_loader, get_data_loader
+from Models.ForwardPass import hook_forward_train
 
 
 def spike_detection_nd(points, max_hyperplanes=30, min_points_for_hyperplane=100, residual_threshold=0.5, merge_threshold=0.01):

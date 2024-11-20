@@ -1,18 +1,18 @@
-from Models import *
+from Models.Models import *
 from utils import *
-from DataGenerator import *
-from ForwardPass import *
-from Analysis import *
-from FeatureExtractor import *
-from ForwardPass import *
+from Data.DataGenerator import *
+from Models.ForwardPass import *
+from Training.Analysis import *
+from Models.FeatureExtractor import *
+from Models.ForwardPass import *
 
 import gc
 import wandb
 import psutil
 import torch.optim as optim
 
-from Neural_collapse import *
-from Spike_loss import *
+from Training.Neural_collapse import *
+from Training.Spike_loss import *
 
 def train_model(model, train_loader, test_loader, base_path, train_x, train_y, val_x, val_y, test_x, test_y, val_loader=None, epochs=100, learning_rate=0.001, loss='crossentropy', optimizer='adam', analye_b_size=10000, status='default'):
     

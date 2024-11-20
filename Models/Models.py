@@ -2,7 +2,7 @@ from utils import *
 from abc import ABC, abstractmethod
 from utils import nn
 from utils import np
-from ParentModels import *
+from Models.ParentModels import *
 
 
 class MLP_mnist(ParentNetwork):

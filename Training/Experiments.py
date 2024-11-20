@@ -1,20 +1,20 @@
-from Models import *
-from DataGenerator import *
+from Models.Models import *
+from Data.DataGenerator import *
 from utils import *
-from Training import *
-from ForwardPass import *
-from Models_normal import *
-from FeatureExtractor import *
-from Analysis import *
+from Training.Training import *
+from Models.ForwardPass import *
+from Models.Models_normal import *
+from Models.FeatureExtractor import *
+from Training.Analysis import *
 import torch
 import os
 from torchvision import datasets, transforms, models
 from torch.utils.data import DataLoader, Subset
 import numpy as np
-from VisionTranformer import VisionTransformer
+from Models.VisionTranformer import VisionTransformer
 
 import wandb
-from other_models import MLPMixer
+from Models.other_models import MLPMixer
 
 def random_experiment_hook_engine(architecture, exps=50, num=1000, pre_path='', data_properties={'normal_dist': True, 'loc': 0, 'scale': 1, 'exp_type': 'normal'}, bias=0, model_type='mlp', new_model_each_time=False):
 
