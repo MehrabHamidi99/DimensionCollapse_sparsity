@@ -217,6 +217,60 @@ def get_mnist_data_loaders(batch_size=64):
 
 
 
+def get_mnist_data_loaders_cnn_based_model(batch_size=64, image_size=28):
+
+    # Define transformations for the data
+    test_transform = transforms.Compose([transforms.Resize([image_size, image_size]), 
+                                                transforms.ToTensor(), 
+                                                transforms.Normalize([0.5], [0.5])])
+    
+    train_transform = transforms.Compose([transforms.Resize([image_size, image_size]),
+                                            transforms.RandomCrop(image_size, padding=2), 
+                                            transforms.ToTensor(), 
+                                            transforms.Normalize([0.5], [0.5])])
+
+    # Download MNIST dataset
+    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=train_transform)
+
+    test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=test_transform)
+
+    # Split the training dataset into training (50,000) and validation (10,000) sets
+    train_size = 50000
+    val_size = 10000
+    train_indices = list(range(train_size))
+    val_indices = list(range(train_size, train_size + val_size))
+
+    train_dataset_split = Subset(train_dataset, train_indices)
+    val_dataset_split = Subset(train_dataset, val_indices)
+
+    # Create DataLoaders for train, validation, and test datasets
+    batch_size = 64  # You can change this according to your requirements
+
+    train_loader = DataLoader(train_dataset_split, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset_split, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    # Faster extraction of samples and labels using direct indexing
+    train_samples = train_dataset.data[train_indices].unsqueeze(1).float() / 255.0
+    train_labels = train_dataset.targets[train_indices]
+
+    val_samples = train_dataset.data[val_indices].unsqueeze(1).float() / 255.0
+    val_labels = train_dataset.targets[val_indices]
+
+    test_samples = test_dataset.data.unsqueeze(1).float() / 255.0
+    test_labels = test_dataset.targets
+
+    # Normalize the data (since we used .ToTensor() previously in the transformation)
+    train_samples = (train_samples - 0.1307) / 0.3081
+    val_samples = (val_samples - 0.1307) / 0.3081
+    test_samples = (test_samples - 0.1307) / 0.3081
+
+    print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels)
+
+    return train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels
+
+
+
 def get_cifar100_data_loaders(batch_size=64):
     """
     Load CIFAR-100 dataset and create DataLoaders for training, validation, and testing.
@@ -442,3 +496,131 @@ def get_data_loader(X, y, batch_size=32, shuffle=True):
 
     dataset = TensorDataset(tensor_x, tensor_y)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+def get_simple_data_loader(X, batch_size=10000, shuffle=False):
+    
+    tensor_x = torch.Tensor(X)
+
+    dataset = MyDataset(tensor_x)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+
+class MyDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+        
+    def __getitem__(self, index):
+        x = self.data[index]
+        return x
+    
+    def __len__(self):
+        return len(self.data)
+    
+
+
+def get_kuzushiji_mnist_data_loaders(batch_size=64):
+    # Define transformations for the data
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1904,), (0.3475,))  # Normalize with mean and std of Kuzushiji-MNIST dataset
+    ])
+
+    # Download Kuzushiji-MNIST dataset
+    train_dataset = datasets.KMNIST(root='./data', train=True, download=True, transform=transform)
+    test_dataset = datasets.KMNIST(root='./data', train=False, download=True, transform=transform)
+
+    # Split the training dataset into training (50,000) and validation (10,000) sets
+    train_size = 50000
+    val_size = 10000
+    train_indices = list(range(train_size))
+    val_indices = list(range(train_size, train_size + val_size))
+
+    train_dataset_split = Subset(train_dataset, train_indices)
+    val_dataset_split = Subset(train_dataset, val_indices)
+
+    # Create DataLoaders for train, validation, and test datasets
+    train_loader = DataLoader(train_dataset_split, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset_split, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    # Faster extraction of samples and labels using direct indexing
+    train_samples = train_dataset.data[train_indices].unsqueeze(1).float().view(-1, 28 * 28) / 255.0
+    train_labels = train_dataset.targets[train_indices]
+
+    val_samples = train_dataset.data[val_indices].unsqueeze(1).float().view(-1, 28 * 28) / 255.0
+    val_labels = train_dataset.targets[val_indices]
+
+    test_samples = test_dataset.data.unsqueeze(1).float().view(-1, 28 * 28) / 255.0
+    test_labels = test_dataset.targets
+
+    # Normalize the data (since we used .ToTensor() previously in the transformation)
+    train_samples = (train_samples - 0.1904) / 0.3475
+    val_samples = (val_samples - 0.1904) / 0.3475
+    test_samples = (test_samples - 0.1904) / 0.3475
+
+    print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels)
+
+    return train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels
+
+
+
+def get_three_class_cifar10_data_loaders(batch_size=64, selected_classes=[0, 1, 2]):
+    # Define transformations for the data
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize for CIFAR-10 dataset
+    ])
+
+    # Download CIFAR-10 dataset
+    train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+    test_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
+
+    # Filter the dataset for the selected classes
+    def filter_classes(dataset, selected_classes):
+        indices = [i for i, label in enumerate(dataset.targets) if label in selected_classes]
+        dataset.targets = torch.tensor(dataset.targets)[indices]
+        dataset.data = dataset.data[indices]
+        return dataset
+
+    # Apply the filtering
+    train_dataset = filter_classes(train_dataset, selected_classes)
+    test_dataset = filter_classes(test_dataset, selected_classes)
+
+    # Map the selected classes to new labels (0, 1, 2)
+    def remap_labels(dataset, selected_classes):
+        class_map = {c: i for i, c in enumerate(selected_classes)}
+        dataset.targets = torch.tensor([class_map[label.item()] for label in dataset.targets])
+
+    remap_labels(train_dataset, selected_classes)
+    remap_labels(test_dataset, selected_classes)
+
+    # Split the training dataset into training (80%) and validation (20%) sets
+    train_size = int(len(train_dataset) * 0.8)
+    val_size = len(train_dataset) - train_size
+    train_indices = list(range(train_size))
+    val_indices = list(range(train_size, train_size + val_size))
+
+    train_dataset_split = Subset(train_dataset, train_indices)
+    val_dataset_split = Subset(train_dataset, val_indices)
+
+    # Create DataLoaders for train, validation, and test datasets
+    train_loader = DataLoader(train_dataset_split, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset_split, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    # Extract samples and labels
+    train_samples, train_labels = train_dataset.data[train_indices], train_dataset.targets[train_indices]
+    val_samples, val_labels = train_dataset.data[val_indices], train_dataset.targets[val_indices]
+    test_samples, test_labels = test_dataset.data, test_dataset.targets
+
+    # Normalize the data (since we used .ToTensor() previously in the transformation)
+    train_samples = (train_samples.astype('float32') / 255.0 - 0.5) / 0.5
+    val_samples = (val_samples.astype('float32') / 255.0 - 0.5) / 0.5
+    test_samples = (test_samples.astype('float32') / 255.0 - 0.5) / 0.5
+
+    print_status(train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels)
+
+    return train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels
+

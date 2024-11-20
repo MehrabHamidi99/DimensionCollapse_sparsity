@@ -136,6 +136,9 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
     FIRST_BATCH = True
 
+    results_dict['representations'] = []
+    results_dict['representations'].append(samples)
+
     for sample, label in data_loader:
         sample = sample.to(device)
         label = label.to(device)
@@ -158,7 +161,9 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
         else:
             results_dict = _update_covar(results_dict, sample_, covariance_matrix, 0)
 
-        relu_outputs = hook_forward(feature_extractor, sample, label, device)
+        # relu_outputs = hook_forward(feature_extractor, sample, label, device)
+        relu_outputs = hook_forward(feature_extractor, sample)
+
         # ـ, relu_outputs = feature_extractor(samples)
 
         results_dict, FIRST_BATCH, new_labels = _on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample_, pred)
@@ -177,12 +182,13 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
     plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'])
     
     # Empty the GPU cache
-    del results_dict, relu_outputs, data_loader, feature_extractor
+    del relu_outputs, data_loader, feature_extractor
     gc.collect()
 
     torch.cuda.empty_cache()
     libc = ctypes.CDLL("libc.so.6")
     libc.malloc_trim(0)
+    return results_dict
 
 
 @torch.no_grad
@@ -221,6 +227,7 @@ def _on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, pr
         # layer_act = relu_outputs_batch[i].detach().cpu().numpy()
         layer_act = relu_outputs_batch[i]
 
+
         if len(layer_act.shape) == 3:
             layer_act = torch.mean(layer_act, dim=1).view(layer_act.shape[0], -1)
         if len(layer_act.shape) > 3:
@@ -242,8 +249,10 @@ def _on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, pr
         result_dict = batch_projectional_analysis(covariance_matrix, layer_act, result_dict, first_batch=FIRST_BATCH, this_index=i + 1)
 
         if FIRST_BATCH:
+            result_dict['representations'].append(layer_act)
             result_dict = _add_covar(result_dict, relu_outputs_batch[i], covariance_matrix)
         else:
+            result_dict['representations'][i + 1] = torch.cat([result_dict['representations'][i + 1], layer_act])
             result_dict = _update_covar(result_dict, relu_outputs_batch[i], covariance_matrix, i + 1)
 
     if FIRST_BATCH:
@@ -320,7 +329,9 @@ def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_pa
         output = model(sample).detach().cpu().numpy()
         # pred = torch.argmax(output, dim=1)  # Not needed anymore
 
-        relu_outputs = hook_forward(feature_extractor, sample, label, device)
+        # relu_outputs = hook_forward(feature_extractor, sample, label, device)
+        relu_outputs = hook_forward(feature_extractor, sample)
+
         results_dict = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
 
 

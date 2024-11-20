@@ -136,8 +136,8 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
         #     new=True
         # )
         
-        plt.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
-        # plt.close()
+        fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
+        plt.close(fig)
 
     # del layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, fig, axs
     # gc.collect()
@@ -340,9 +340,8 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     ax[1, 0].set_title('Max/Mean Norms throughout layers')
     ax[1, 0].legend()
     
-    sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax[1, 1])
+    sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax[1, 1], vmin=0, vmax=num)
     ax[1, 1].set_title('Neuron activation heatmap')
-
 
     tp = ax[2, 0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
     ax[2, 0].set_ylabel('Stable Rank')
@@ -392,45 +391,45 @@ def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batc
             result_dict['pca_2'][this_index][1].extend(projected_data[:, -2].cpu().detach().numpy())
 
             random_dims  = random.sample(set(list(range(0, data.shape[1]))), 2)
-            result_dict['random_2'][this_index][0].extend(data[:, 0])
-            result_dict['random_2'][this_index][1].extend(data[:, 1])
+            result_dict['random_2'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['random_2'][this_index][1].extend(data[:, 1].cpu().detach().numpy())
 
-            result_dict['pca_3'][this_index][0].extend(data[:, 0])
-            result_dict['pca_3'][this_index][1].extend(data[:, 1])
-            result_dict['pca_3'][this_index][2].extend(data[:, 2])
+            result_dict['pca_3'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['pca_3'][this_index][1].extend(data[:, 1].cpu().detach().numpy())
+            result_dict['pca_3'][this_index][2].extend(data[:, 2].cpu().detach().numpy())
 
-            result_dict['random_3'][this_index][0].extend(data[:, 0])
-            result_dict['random_3'][this_index][1].extend(data[:, 1])
-            result_dict['random_3'][this_index][2].extend(data[:, 2])
+            result_dict['random_3'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['random_3'][this_index][1].extend(data[:, 1].cpu().detach().numpy())
+            result_dict['random_3'][this_index][2].extend(data[:, 2].cpu().detach().numpy())
             
         elif data.shape[1] == 2:
-            result_dict['pca_2'][this_index][0].extend(data[:, 0])
-            result_dict['pca_2'][this_index][1].extend(data[:, 1])
+            result_dict['pca_2'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['pca_2'][this_index][1].extend(data[:, 1].cpu().detach().numpy())
 
-            result_dict['random_2'][this_index][0].extend(data[:, 0])
-            result_dict['random_2'][this_index][1].extend(data[:, 1])
+            result_dict['random_2'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['random_2'][this_index][1].extend(data[:, 1].cpu().detach().numpy())
 
-            result_dict['pca_3'][this_index][0].extend(data[:, 0])
-            result_dict['pca_3'][this_index][1].extend(data[:, 1])
-            result_dict['pca_3'][this_index][2].extend(data[:, 1] * 0)
+            result_dict['pca_3'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['pca_3'][this_index][1].extend(data[:, 1].cpu().detach().numpy())
+            result_dict['pca_3'][this_index][2].extend(data[:, 1].cpu().detach().numpy() * 0)
 
-            result_dict['random_3'][this_index][0].extend(data[:, 0])
-            result_dict['random_3'][this_index][1].extend(data[:, 1])
-            result_dict['random_3'][this_index][2].extend(data[:, 1] * 0)
+            result_dict['random_3'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['random_3'][this_index][1].extend(data[:, 1].cpu().detach().numpy())
+            result_dict['random_3'][this_index][2].extend(data[:, 1].cpu().detach().numpy() * 0)
         else:
-            result_dict['pca_2'][this_index][0].extend(data[:, 0])
-            result_dict['pca_2'][this_index][1].extend(data[:, 0] * 0)
+            result_dict['pca_2'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['pca_2'][this_index][1].extend(data[:, 0].cpu().detach().numpy() * 0)
 
-            result_dict['random_2'][this_index][0].extend(data[:, 0])
-            result_dict['random_2'][this_index][1].extend(data[:, 0] * 0)
+            result_dict['random_2'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['random_2'][this_index][1].extend(data[:, 0].cpu().detach().numpy() * 0)
 
-            result_dict['pca_3'][this_index][0].extend(data[:, 0])
-            result_dict['pca_3'][this_index][1].extend(data[:, 0] * 0)
-            result_dict['pca_3'][this_index][2].extend(data[:, 0] * 0)
+            result_dict['pca_3'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['pca_3'][this_index][1].extend(data[:, 0].cpu().detach().numpy() * 0)
+            result_dict['pca_3'][this_index][2].extend(data[:, 0].cpu().detach().numpy() * 0)
 
-            result_dict['random_3'][this_index][0].extend(data[:, 0])
-            result_dict['random_3'][this_index][1].extend(data[:, 0])
-            result_dict['random_3'][this_index][2].extend(data[:, 0] * 0)
+            result_dict['random_3'][this_index][0].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['random_3'][this_index][1].extend(data[:, 0].cpu().detach().numpy())
+            result_dict['random_3'][this_index][2].extend(data[:, 0].cpu().detach().numpy() * 0)
 
         return result_dict
 

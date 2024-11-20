@@ -28,7 +28,9 @@ import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-arch = (784, [128, 64, 100])
+# arch = (784, [128, 64, 100])
+
+
 
 # model = MNIST_classifier(n_in=arch[0], layer_list=arch[1], bias=0)
 
@@ -58,7 +60,7 @@ arch = (784, [128, 64, 100])
 
 
 
-cifar100_training_analysis_hook_engine(11, pre_path='debug_res', debug=True)
+# viT_mnist(12, pre_path='debug_res', debug=True)
 
 
 # mnist_training_analysis_hook_engine(0, archirecture=(784, [256, 128, 64, 32, 10]), pre_path='sept_result_mnist_three_class', three_class=True)
@@ -67,7 +69,11 @@ cifar100_training_analysis_hook_engine(11, pre_path='debug_res', debug=True)
 # # # Pre-trained model
 # # model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=2)
 
-# mnist_training_analysis_hook_engine(0, pre_path='debug_here')
+
+
+arch = (784, [128, 64, 32, 32, 32, 32, 32, 10])
+
+mnist_training_analysis_spike_loss(0, pre_path='debug_here_new')
 
 # scale = 10
 # loc = 0

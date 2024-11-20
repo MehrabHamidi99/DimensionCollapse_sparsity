@@ -9,7 +9,7 @@ from sklearn.mixture import GaussianMixture
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-save_path = 'bayesian_est/'
+save_path = 'bayesian_est2/'
 if not os.path.isdir(save_path):
     os.makedirs(save_path)
 

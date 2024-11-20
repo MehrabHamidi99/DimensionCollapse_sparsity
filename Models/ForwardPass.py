@@ -5,7 +5,15 @@ from utils import *
 
 
 
-def hook_forward(extractor, dataset, labels, device):
+def hook_forward(extractor, x):
+    output, relu_outputs = extractor(x)
+    return relu_outputs
+
+def hook_forward_train(extractor, x):
+    output, relu_outputs = extractor(x)
+    return output, relu_outputs
+
+def hook_forward_past(extractor, dataset, labels, device):
 
     data_loader = get_data_loader(dataset, labels, batch_size=dataset.shape[0], shuffle=False)
     

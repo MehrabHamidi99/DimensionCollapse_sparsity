@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 
 class MLP_simple(nn.Module):
-    def __init__(self, n_in, layer_list, bias=1e-4, init_scale=1):
+    def __init__(self, n_in, layer_list, bias=1e-4, init_scale=1, activation=nn.ReLU):
         super(MLP_simple, self).__init__()
 
         self.n_in = n_in
@@ -17,11 +17,13 @@ class MLP_simple(nn.Module):
         
         self.layers = nn.Sequential()
 
+        self.activation = activation
+
         self.layers.add_module(f"linear_{0}", nn.Linear(n_in, layer_list[0]))
-        self.layers.add_module(f"relu_{0}", nn.ReLU())
+        self.layers.add_module(f"relu_{0}", self.activation())
         for i in range(len(layer_list) - 1):
             self.layers.add_module(f"linear_{i + 1}", nn.Linear(layer_list[i], layer_list[i + 1]))
-            self.layers.add_module(f"relu_{i + 1}", nn.ReLU())
+            self.layers.add_module(f"relu_{i + 1}", self.activation())
 
         self.init_all_weights()
 

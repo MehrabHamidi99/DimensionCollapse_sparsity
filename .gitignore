@@ -7,3 +7,5 @@ data/*
 data
 main_env/
 debug_res/
+*/__pycache__/*
+*/__pycache__
