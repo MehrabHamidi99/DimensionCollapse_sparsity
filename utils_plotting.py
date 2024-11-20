@@ -89,61 +89,107 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
     ax.set_ylabel('Frequency')
 
 
-def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = []):
+def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = []):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d =\
           result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
     dist_all = np.array(dist_all)
 
-    
-    fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
+    # Determine grid size to make a square-like grid based on len(list_pca_2d)
+    num_frames = len(list_pca_2d)
+    largest_divisor = max([i for i in range(1, num_frames + 1) if num_frames % i == 0])
+    grid_size = (num_frames // largest_divisor, largest_divisor)
 
     os.makedirs(pre_path + 'all_gifs/', exist_ok=True)
 
-    for frame in range(len(list_pca_2d)):
-        animate_histogram(axs[0, 0], min(frame, len(layer_activation_ratio) - 1), layer_activation_ratio, 'layer ', zero_one=True, num=num)
-        animate_histogram(axs[0, 1], frame, eigens, 'layers: ', x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
-        animate_histogram(axs[0, 2], frame, dist_all, 'layers: ', x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
+    # Create a list to store the axes for each frame
+    for frame in range(num_frames):
+        fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
 
-        plot_data_projection(axs[1, 0], frame, list_pca_2d, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
-        plot_data_projection(axs[1, 1], frame, list_random_2d, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+        if len(layer_names) > 0:
+            subplot_title = layer_names
+        else:
+            subplot_title = 'layers: '
         
-        # Plot 2D PCA projection
-        # plot_data_projection(
-        #     axs[1, 1],
-        #     frame,
-        #     result_dict['pca_projections_2d'],
-        #     labels_all=result_dict['layer_labels'],
-        #     dim=2,
-        #     type_analysis='pca',
-        #     new=True
-        # )
+        animate_histogram(axs[0, 0], min(frame, len(layer_activation_ratio) - 1), layer_activation_ratio, title=subplot_title, zero_one=True, num=num)
+        animate_histogram(axs[0, 1], frame, eigens, title=subplot_title, x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
+        animate_histogram(axs[0, 2], frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
+
+        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+        
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], frame, list_pca_3d, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], frame, list_random_3d, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
-                # Plot 3D PCA projection
-        # axs[1] = plt.subplot(1, 2, 2, projection='3d')
-        # plot_data_projection(
-        #     axs[1, 3],
-        #     frame,
-        #     result_dict['pca_projections_3d'],
-        #     labels_all=result_dict['layer_labels'],
-        #     dim=3,
-        #     type_analysis='pca',
-        #     new=True
-        # )
+        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
         
         fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
         plt.close(fig)
-
-    # del layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, fig, axs
-    # gc.collect()
-
     
+    # if num_frames % grid_size != 0:
+    #     if num_frames > 10:
+    #         raise Exception("Can't create grid")
+    #     else:
+    #         grid_size = num_frames
 
+    # Create 8 figures, each containing all frames for one of the subplots
+    for i in range(7):
+        fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(25, 15))
+        axs = axs.flatten()
+
+        for frame in range(num_frames):
+            fig_ax = axs[frame]
+
+            if len(layer_names) > 0:
+                subplot_title = layer_names
+            else:
+                subplot_title = 'layers: '
+
+            # Re-generate only the specific subplot for the frame
+            if i == 0:
+                animate_histogram(fig_ax, min(frame, len(layer_activation_ratio) - 1), layer_activation_ratio, title=subplot_title, zero_one=True, num=num)
+            elif i == 1:
+                animate_histogram(fig_ax, frame, eigens, title=subplot_title, x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)
+            elif i == 2:
+                animate_histogram(fig_ax, frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
+            elif i == 3:
+                plot_data_projection(fig_ax, frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+            elif i == 4:
+                plot_data_projection(fig_ax, frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+            elif i == 5:
+                axs[frame].remove()
+                fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
+                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+            elif i == 6:
+                axs[frame].remove()
+                fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
+                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
+
+            if len(layer_names) > 0:
+                fig_ax.set_title(layer_names[frame])
+            else:
+                subplot_title = 'layers: '
+                fig_ax.set_title(f'layers: {frame}')
+
+        # Hide any empty subplots
+        for j in range(num_frames, len(axs)):
+            axs[j].axis('off')
+
+        # Set axis labels only for the bottom row and left column, remove for others
+        for ax_row in axs.reshape(grid_size)[:-1, :].flatten():
+            ax_row.set_xlabel('')
+        for ax_col in axs.reshape(grid_size)[:, 1:].flatten():
+            ax_col.set_ylabel('')
+        for ax_row in axs.reshape(grid_size)[-1, :]:
+            ax_row.set_xlabel('X-axis')
+        for ax_col in axs.reshape(grid_size)[:, 0]:
+            ax_col.set_ylabel('Y-axis')
+
+        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
+        plt.close(fig)
+    
     _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
 
 
@@ -185,43 +231,43 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     # print(counter)
     ax.cla()
 
-    if new:
+    # if new:
 
-        projections = anim_pieces[counter]
-        labels = labels_all[0]
+    #     projections = anim_pieces[counter]
+    #     labels = labels_all[0]
 
-        # Ensure the number of data points matches the number of labels
-        assert projections.shape[0] == len(labels), f"Mismatch in data points and labels at layer {counter}"
+    #     # Ensure the number of data points matches the number of labels
+    #     assert projections.shape[0] == len(labels), f"Mismatch in data points and labels at layer {counter}"
 
-        # Convert labels to a NumPy array if it's a list
-        labels = np.array(labels)
+    #     # Convert labels to a NumPy array if it's a list
+    #     labels = np.array(labels)
 
-        # Create a color map based on unique labels
-        unique_labels = np.unique(labels)
-        num_classes = len(unique_labels)
-        cmap = plt.get_cmap('tab10') if num_classes <= 10 else plt.get_cmap('tab20') # type: ignore
+    #     # Create a color map based on unique labels
+    #     unique_labels = np.unique(labels)
+    #     num_classes = len(unique_labels)
+    #     cmap = plt.get_cmap('tab10') if num_classes <= 10 else plt.get_cmap('tab20') # type: ignore
 
-        # Map labels to colors
-        colors = [cmap(label / num_classes) for label in labels]
+    #     # Map labels to colors
+    #     colors = [cmap(label / num_classes) for label in labels]
 
-        if dim == 2:
-            ax.scatter(projections[:, 0], projections[:, 1], c=colors, s=10)
-            ax.set_xlabel('PC1')
-            ax.set_ylabel('PC2')
-        elif dim == 3:
-            ax.scatter(projections[:, 0], projections[:, 1], projections[:, 2], c=colors, s=10)
-            ax.set_xlabel('PC1')
-            ax.set_ylabel('PC2')
-            ax.set_zlabel('PC3')
+    #     if dim == 2:
+    #         ax.scatter(projections[:, 0], projections[:, 1], c=colors, s=10)
+    #         ax.set_xlabel('PC1')
+    #         ax.set_ylabel('PC2')
+    #     elif dim == 3:
+    #         ax.scatter(projections[:, 0], projections[:, 1], projections[:, 2], c=colors, s=10)
+    #         ax.set_xlabel('PC1')
+    #         ax.set_ylabel('PC2')
+    #         ax.set_zlabel('PC3')
 
-        ax.set_title(f'Layer {counter} PCA Projection')
-        ax.grid(True)
+    #     ax.set_title(f'Layer {counter} PCA Projection')
+    #     ax.grid(True)
 
-        # Add legend
-        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=cmap(label / num_classes), # type: ignore
-                            markersize=8, label=str(label)) for label in unique_labels]
-        ax.legend(handles=handles, title="Classes", loc="best")
-        return
+    #     # Add legend
+    #     handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=cmap(label / num_classes), # type: ignore
+    #                         markersize=8, label=str(label)) for label in unique_labels]
+    #     ax.legend(handles=handles, title="Classes", loc="best")
+    #     return
 
     # eigenvectors_2d = eigenvectors[0]
     # ax.clear()

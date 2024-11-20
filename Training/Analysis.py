@@ -161,7 +161,8 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
             results_dict = _update_covar(results_dict, sample_, covariance_matrix, 0)
 
         # relu_outputs = hook_forward(feature_extractor, sample, label, device)
-        relu_outputs = hook_forward(feature_extractor, sample)
+        relu_outputs, names = hook_forward(feature_extractor, sample, name=True)
+        names.insert(0, 'input')
 
         # ـ, relu_outputs = feature_extractor(samples)
 
@@ -178,7 +179,7 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
     plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 
-    plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'])
+    plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'], layer_names=names)
     
     # Empty the GPU cache
     del relu_outputs, data_loader, feature_extractor
@@ -274,83 +275,83 @@ def _add_covar(result_dict, this_data, covar_matrix):
     return result_dict
 
 
-def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_path, model_status):
+# def fixed_model_batch_analysis_one_batch(model, samples, labels, device, save_path, model_status):
 
-    FIRST_BATCH = None
+#     FIRST_BATCH = None
 
-    def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, labels):
+#     def on_the_go_analysis(result_dict, relu_outputs_batch, FIRST_BATCH, sample, labels):
 
-        # Collect activations and labels per layer
-        # For the input layer (layer 0)
-        layer_act_input = sample.detach().cpu().numpy()
-        result_dict['layer_activations'][0].append(layer_act_input)
-        result_dict['layer_labels'][0].extend(labels.detach().cpu().numpy().tolist())
+#         # Collect activations and labels per layer
+#         # For the input layer (layer 0)
+#         layer_act_input = sample.detach().cpu().numpy()
+#         result_dict['layer_activations'][0].append(layer_act_input)
+#         result_dict['layer_labels'][0].extend(labels.detach().cpu().numpy().tolist())
 
-        for i in range(len(relu_outputs_batch)):
-            layer_act = relu_outputs_batch[i].detach().cpu().numpy()
-            result_dict['layer_activations'][i + 1].append(layer_act)
-            result_dict['layer_labels'][i + 1].extend(labels.detach().cpu().numpy().tolist())
+#         for i in range(len(relu_outputs_batch)):
+#             layer_act = relu_outputs_batch[i].detach().cpu().numpy()
+#             result_dict['layer_activations'][i + 1].append(layer_act)
+#             result_dict['layer_labels'][i + 1].extend(labels.detach().cpu().numpy().tolist())
 
-        return result_dict
+#         return result_dict
     
-    # Initialize result_dict with lists to collect activations and labels
-    results_dict = {
-        'layer_activations': [[] for _ in range(len(model.layer_list) + 1 + 1)],  # Including input layer
-        'layer_labels': [[] for _ in range(len(model.layer_list) + 1 + 1)],
+#     # Initialize result_dict with lists to collect activations and labels
+#     results_dict = {
+#         'layer_activations': [[] for _ in range(len(model.layer_list) + 1 + 1)],  # Including input layer
+#         'layer_labels': [[] for _ in range(len(model.layer_list) + 1 + 1)],
 
-        # 'activations': [],
-        # 'non_zero_activations_layer_wise' : [],
-        # 'cell_dimensions': [],
-        # 'batch_cell_dimensions': [],
-        # 'nonzero_eigenvalues_count': [],
-        # 'eigenvalues': [],
-        # 'stable_rank': [],
-        # 'simple_spherical_mean_width': [],
-        # 'spherical_mean_width_v2': [],
-        # 'norms': [],
-        # 'eigenvectors': [],
-        # 'pca_2': [], 
-        # 'pca_3': [],
-        # 'random_2': [],
-        # 'random_3': [],
-    }
+#         # 'activations': [],
+#         # 'non_zero_activations_layer_wise' : [],
+#         # 'cell_dimensions': [],
+#         # 'batch_cell_dimensions': [],
+#         # 'nonzero_eigenvalues_count': [],
+#         # 'eigenvalues': [],
+#         # 'stable_rank': [],
+#         # 'simple_spherical_mean_width': [],
+#         # 'spherical_mean_width_v2': [],
+#         # 'norms': [],
+#         # 'eigenvectors': [],
+#         # 'pca_2': [], 
+#         # 'pca_3': [],
+#         # 'random_2': [],
+#         # 'random_3': [],
+#     }
 
-    # Rest of your code remains mostly the same, with adjustments to pass labels
-    feature_extractor = ReluExtractor(model, device=device)
-    this_batch_size = min(10000, samples.shape[0])
-    # this_batch_size = samples.shape[0]
-    data_loader = get_data_loader(samples, labels, batch_size=this_batch_size, shuffle=False)
+#     # Rest of your code remains mostly the same, with adjustments to pass labels
+#     feature_extractor = ReluExtractor(model, device=device)
+#     this_batch_size = min(10000, samples.shape[0])
+#     # this_batch_size = samples.shape[0]
+#     data_loader = get_data_loader(samples, labels, batch_size=this_batch_size, shuffle=False)
 
-    for sample, label in data_loader:
-        sample = sample.to(device)
-        label = label.to(device)
+#     for sample, label in data_loader:
+#         sample = sample.to(device)
+#         label = label.to(device)
 
-        output = model(sample).detach().cpu().numpy()
-        # pred = torch.argmax(output, dim=1)  # Not needed anymore
+#         output = model(sample).detach().cpu().numpy()
+#         # pred = torch.argmax(output, dim=1)  # Not needed anymore
 
-        # relu_outputs = hook_forward(feature_extractor, sample, label, device)
-        relu_outputs = hook_forward(feature_extractor, sample)
+#         # relu_outputs = hook_forward(feature_extractor, sample, label, device)
+#         relu_outputs = hook_forward(feature_extractor, sample)
 
-        results_dict = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
+#         results_dict = on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample, label)
 
 
-    # After processing all batches, concatenate activations and labels per layer
-    for i in range(len(results_dict['layer_activations'])):
-        results_dict['layer_activations'][i] = np.concatenate(results_dict['layer_activations'][i], axis=0)
-        # Labels are already extended as lists
+#     # After processing all batches, concatenate activations and labels per layer
+#     for i in range(len(results_dict['layer_activations'])):
+#         results_dict['layer_activations'][i] = np.concatenate(results_dict['layer_activations'][i], axis=0)
+#         # Labels are already extended as lists
 
-    final_results_dict = all_analysis_for_hook_engine(results_dict['layer_activations'][1:], results_dict['layer_activations'][0])
-    final_results_dict['layer_labels'] = results_dict['layer_labels']
-    final_results_dict['layer_activations'] = results_dict['layer_activations']
+#     final_results_dict = all_analysis_for_hook_engine(results_dict['layer_activations'][1:], results_dict['layer_activations'][0])
+#     final_results_dict['layer_labels'] = results_dict['layer_labels']
+#     final_results_dict['layer_activations'] = results_dict['layer_activations']
 
-    del results_dict
+#     del results_dict
 
-    # Perform PCA and other analyses after aggregation
-    final_results_dict = perform_pca_and_analyses(final_results_dict, device)
+#     # Perform PCA and other analyses after aggregation
+#     final_results_dict = perform_pca_and_analyses(final_results_dict, device)
 
-    plotting_actions(final_results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
+#     plotting_actions(final_results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 
-    # Plotting
-    plot_gifs(final_results_dict, this_path=save_path, num=samples.shape[0], pre_path=save_path, labels=final_results_dict['layer_labels'])
-    del final_results_dict
-    del relu_outputs, data_loader
+#     # Plotting
+#     plot_gifs(final_results_dict, this_path=save_path, num=samples.shape[0], pre_path=save_path, labels=final_results_dict['layer_labels'])
+#     del final_results_dict
+#     del relu_outputs, data_loader
