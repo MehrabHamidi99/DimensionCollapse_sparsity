@@ -112,11 +112,11 @@ class CIFAR_Res_classifier(nn.Module):
         self.layers = nn.Sequential()
 
         self.layers.add_module(f"linear_{0}", nn.Linear(n_in, layer_list[0]))
-        self.layers.add_module(f"relu_{0}", nn.ReLU())
+        # self.layers.add_module(f"relu_{0}", nn.ReLU())
         for i in range(len(layer_list) - 1):
             self.layers.add_module(f"linear_{i + 1}", nn.Linear(layer_list[i], layer_list[i + 1]))
-            if i < len(layer_list) - 2:
-                self.layers.add_module(f"relu_{i + 1}", nn.ReLU())
+            # if i < len(layer_list) - 2:
+            #     self.layers.add_module(f"relu_{i + 1}", nn.ReLU())
         
         self.log_softmax = nn.LogSoftmax(dim=1)
 
@@ -125,14 +125,18 @@ class CIFAR_Res_classifier(nn.Module):
 
     def forward(self, x):
         x = x.view(-1, self.n_in)
-        residual = 0
-        
+        residual = torch.tensor([0.0], dtype=x.dtype).requires_grad_(True).to(x.device)
+
         for i, layer in enumerate(self.layers):
-            x = layer(x)
+            out = layer(x)
+            if i != len(self.layers) - 1:  # Apply ReLU to all except the last layer
+                out = F.relu(out, inplace=False)  # Avoid in-place operation by setting inplace=False
+
             # Add skip connection for every 5 layers
-            if (i + 1) % 5 == 0 and i != len(self.layers) - 1:
-                x += residual
-                residual = x
+            if i % 5 == 0 and i != 0:
+                out = out + residual  # Avoid in-place addition
+                residual = out.detach()  # Detach to avoid modifying tensor that requires gradient
+            x = out
 
         output = self.log_softmax(x)
         return output

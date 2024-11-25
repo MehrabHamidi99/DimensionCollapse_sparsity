@@ -203,7 +203,7 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
         model.eval()
         feature_extractor = ReluExtractor(model, device=device)
 
-        nc_metrics = compute_neural_collapse(
+        nc_metrics = compute_neural_collapse_metrics(
             training_data=train_x,
             training_labels=train_y,
             model=model,

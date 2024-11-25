@@ -78,7 +78,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # arch = (784, [64, 64, 64, 64, 64, 32, 32, 10])
 
-cifar10_training_analysis_spike_loss(0, pre_path='debug_here_new')
+debug_sample_trainer(0, pre_path='debug_here_new')
     
 # scale = 10
 # loc = 0

@@ -121,6 +121,119 @@ def spike_detection_nd(points, max_hyperplanes=30, min_points_for_hyperplane=100
 
     return hyperplanes, total_error, assigned_points
 
+def _hyperplane_distance(coef1, intercept1, coef2, intercept2):
+    # Calculate the angle between the normal vectors of the hyperplanes
+    cos_angle = np.dot(coef1, coef2) / (np.linalg.norm(coef1) * np.linalg.norm(coef2))
+    angle = np.arccos(np.clip(cos_angle, -1.0, 1.0))
+
+    # Calculate the distance between the hyperplanes at the origin
+    d = np.abs(intercept1 - intercept2) / np.linalg.norm(coef1)
+
+    return angle, d
+
+def spike_detection_2d_lines(points, max_lines=30, min_points_for_line=100, residual_threshold=0.5, merge_threshold=0.01):
+    merge_threshold = merge_threshold * (points.shape[1] - 1)
+    residual_threshold *= (points.shape[1] - 1)
+
+    def fit_line_ransac(points):
+        # Randomly select two dimensions for fitting the line
+        n_dims = points.shape[1]
+        dim_indices = np.random.choice(n_dims, 2, replace=False)
+
+        X = points[:, dim_indices[0]].reshape(-1, 1)  # Use one dimension as X
+        y = points[:, dim_indices[1]]  # Use the other dimension as Y
+
+        # Fit a line using RANSAC
+        ransac = RANSACRegressor(LinearRegression(), 
+                                 max_trials=1000, 
+                                 min_samples=2,
+                                 residual_threshold=residual_threshold,
+                                 stop_probability=0.99)
+        ransac.fit(X, y)
+        return ransac, dim_indices
+
+    def get_line_eq(ransac, dim_indices, n_dims):
+        coef = ransac.estimator_.coef_[0]
+        intercept = ransac.estimator_.intercept_
+
+        # Set up the equation for the line in the n-dimensional space
+        full_coef = np.zeros(n_dims)
+        full_coef[dim_indices[0]] = coef
+        full_coef[dim_indices[1]] = -1
+
+        return full_coef, intercept
+
+    def point_to_line_distance(point, coef, intercept):
+        return np.abs(np.dot(coef, point) + intercept) / np.linalg.norm(coef)
+
+    n_dims = points.shape[1]
+    lines = []
+    remaining_points = points.copy()
+    assigned_points = []
+    total_error = 0
+
+    for _ in range(max_lines):
+        if len(remaining_points) < min_points_for_line:
+            break
+
+        try:
+            ransac, dim_indices = fit_line_ransac(remaining_points)
+        except:
+            return [], 0, []
+
+        coef, intercept = get_line_eq(ransac, dim_indices, n_dims)
+        
+        inlier_mask = ransac.inlier_mask_
+        inlier_points = remaining_points[inlier_mask]
+        
+        line_error = sum(point_to_line_distance(p, coef, intercept) for p in inlier_points)
+        total_error += line_error
+        
+        lines.append((coef, intercept, len(inlier_points), line_error))
+        assigned_points.append(inlier_points)
+        
+        remaining_points = remaining_points[~inlier_mask]
+    
+    if len(lines) == 0:
+        return [], 0, []
+
+    # Assign remaining points to the nearest line
+    for point in remaining_points:
+        distances = [point_to_line_distance(point, coef, intercept) for coef, intercept, _, _ in lines]
+        nearest_line_index = np.argmin(distances)
+        total_error += distances[nearest_line_index]
+        assigned_points[nearest_line_index] = np.vstack([assigned_points[nearest_line_index], point])
+
+    # Merge close lines
+    i = 0
+    while i < len(lines):
+        j = i + 1
+        while j < len(lines):
+            angle, dist = _hyperplane_distance(lines[i][0], lines[i][1], lines[j][0], lines[j][1])
+            if angle < merge_threshold:
+                # Merge lines
+                new_coef = (lines[i][0] + lines[j][0]) / 2
+                new_intercept = (lines[i][1] + lines[j][1]) / 2
+                new_inliers = lines[i][2] + lines[j][2]
+                new_error = lines[i][3] + lines[j][3]
+                new_points = np.vstack([assigned_points[i], assigned_points[j]])
+
+                lines[i] = (new_coef, new_intercept, new_inliers, new_error)
+                assigned_points[i] = new_points
+
+                # Remove the merged line
+                del lines[j]
+                del assigned_points[j]
+            else:
+                j += 1
+        i += 1
+
+    # Sort lines by number of inliers (descending)
+    lines = sorted(zip(lines, assigned_points), key=lambda x: x[0][2], reverse=True)
+    lines, assigned_points = zip(*lines)
+
+    return lines, total_error, assigned_points
+
 
 def assign_points_to_hyperplanes(points, hyperplanes):
         """
@@ -180,7 +293,9 @@ def spike_error(relu_outputs, labels, start_layer, device, true_labels=None):
             class_data_indices = torch.where(labels == each_label)[0]
             points = relu_outputs[i][class_data_indices].clone()
 
-            detected_hyperplanes, _, _ = spike_detection_nd(points.detach().cpu().numpy())
+            # detected_hyperplanes, _, _ = spike_detection_nd(points.detach().cpu().numpy())
+            detected_hyperplanes, _, _ = spike_detection_2d_lines(points.detach().cpu().numpy())
+
             if len(detected_hyperplanes) > 0:
                 _, total_error_, _ = assign_points_to_hyperplanes(points, detected_hyperplanes)
                 total_error += ((total_error_ / points.shape[0]))
@@ -204,7 +319,7 @@ def spike_loss(traning_data, training_labels, optimizer, feature_extractor, devi
         output, relu_outputs = hook_forward_train(feature_extractor, sample)
         pred = torch.exp(output).argmax(dim=1, keepdim=True)
         pred = pred.view_as(target)
-        loss = spike_error(relu_outputs, pred, 5, device, true_labels=target).requires_grad_(True)
+        loss = spike_error(relu_outputs, pred, 8, device, true_labels=target).requires_grad_(True)
 
         optimizer.zero_grad()
         loss.backward()

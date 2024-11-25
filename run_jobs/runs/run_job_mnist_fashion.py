@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # mnist_training_analysis_hook_engine(0, archirecture=arch, pre_path='sept_result_mnist_three_class', three_class=True, odd_even=False)
 
     arch = (784, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
-    fashion_mnist_training_analysis_hook_engine(0, archirecture=arch, pre_path='fashion_mnist')
+    fashion_mnist_training_analysis_hook_engine(0, archirecture=arch, pre_path='november_res/fashion_mnist')
     
     # arch = (784, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
     # mnist_training_analysis_hook_engine(0, archirecture=arch, pre_path='sept_result_mnist_zerobiased', bias=0)

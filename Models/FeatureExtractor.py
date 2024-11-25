@@ -17,8 +17,8 @@ def collect_activations(module: nn.Module):
 
     for name, module in module.named_modules():
         # if isinstance(module, nn.ReLU) or isinstance(module, nn.LogSoftmax):
-        # if isinstance(module, nn.Linear):
-        if isinstance(module, nn.ReLU):
+        if isinstance(module, nn.Linear):
+        # if isinstance(module, nn.ReLU):
             handle = module.register_forward_hook(_save_activation_hook)
             handles.append(handle)
             names.append(name)

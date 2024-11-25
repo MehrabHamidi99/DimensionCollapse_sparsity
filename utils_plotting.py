@@ -97,7 +97,11 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
 
     # Determine grid size to make a square-like grid based on len(list_pca_2d)
     num_frames = len(list_pca_2d)
-    largest_divisor = max([i for i in range(1, num_frames + 1) if num_frames % i == 0])
+    arg_divisor = np.array([[i, num_frames // i] for i in range(1, num_frames) if num_frames % i == 0 and i <= num_frames // i])
+    largest_divisor = arg_divisor[np.argmin(arg_divisor[:, 1] - arg_divisor[:, 0]), 0]
+    # largest_divisor = max([i for i in range(1, num_frames) if num_frames % i == 0])
+    if largest_divisor == 1:
+        largest_divisor = num_frames
     grid_size = (num_frames // largest_divisor, largest_divisor)
 
     os.makedirs(pre_path + 'all_gifs/', exist_ok=True)
@@ -136,7 +140,7 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
 
     # Create 8 figures, each containing all frames for one of the subplots
     for i in range(7):
-        fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(25, 15))
+        fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(25 + grid_size[0], 15 + grid_size[1]))
         axs = axs.flatten()
 
         for frame in range(num_frames):
@@ -155,23 +159,25 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
             elif i == 2:
                 animate_histogram(fig_ax, frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
             elif i == 3:
-                plot_data_projection(fig_ax, frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+                plot_data_projection(fig_ax, frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels, add_legend=False)
             elif i == 4:
-                plot_data_projection(fig_ax, frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+                plot_data_projection(fig_ax, frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels, add_legend=False)
             elif i == 5:
                 axs[frame].remove()
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
-                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels, add_legend=False)
             elif i == 6:
                 axs[frame].remove()
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
-                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
+                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels, add_legend=False)
 
             if len(layer_names) > 0:
                 fig_ax.set_title(layer_names[frame])
             else:
                 subplot_title = 'layers: '
                 fig_ax.set_title(f'layers: {frame}')
+    
+        _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
 
         # Hide any empty subplots
         for j in range(num_frames, len(axs)):
@@ -180,17 +186,19 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
         # Set axis labels only for the bottom row and left column, remove for others
         for ax_row in axs.reshape(grid_size)[:-1, :].flatten():
             ax_row.set_xlabel('')
+            ax_row.set_xticks([])
+
         for ax_col in axs.reshape(grid_size)[:, 1:].flatten():
             ax_col.set_ylabel('')
-        for ax_row in axs.reshape(grid_size)[-1, :]:
-            ax_row.set_xlabel('X-axis')
-        for ax_col in axs.reshape(grid_size)[:, 0]:
-            ax_col.set_ylabel('Y-axis')
+            ax_col.set_yticks([])
+            
+        # for ax_row in axs.reshape(grid_size)[-1, :]:
+        #     ax_row.set_xlabel('X-axis')
+        # for ax_col in axs.reshape(grid_size)[:, 0]:
+        #     ax_col.set_ylabel('Y-axis')
 
         fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
         plt.close(fig)
-    
-    _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
 
 
 def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
@@ -201,6 +209,8 @@ def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
         # Split the filename to extract the index
         # Assuming filename is like '0_layer.png' or '.../0_layer.png'
         parts = base.split('_')
+        # if 'layer' not in parts:
+        #     return -1
         if parts and parts[0].isdigit():
             return int(parts[0])
         else:
@@ -208,7 +218,7 @@ def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
 
 
     # Get list of image file paths in the directory
-    image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('.png')]
+    image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('layer.png')]
 
     # Sort the images based on the extracted layer index
     image_files_sorted = sorted(
@@ -227,7 +237,7 @@ def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
         loop=0
     )
 
-def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all: list = [], new=False):
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all: list = [], new=False, add_legend=True):
     # print(counter)
     ax.cla()
 
@@ -300,12 +310,13 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     
     # If labels are provided, add a legend
     if labels is not None:
-        # Create a list of legend handles
-        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[label],  # type: ignore
-                              markersize=8, label=f'Class {label}') for label in unique_labels]
-        
-        # Add the legend to the axis
-        ax.legend(handles=handles, title="Classes", loc="best")
+        if add_legend:
+            # Create a list of legend handles
+            handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[label],  # type: ignore
+                                markersize=8, label=f'Class {label}') for label in unique_labels]
+            
+            # Add the legend to the axis
+            ax.legend(handles=handles, title="Classes", loc="best")
     
     ax.grid(True)
 

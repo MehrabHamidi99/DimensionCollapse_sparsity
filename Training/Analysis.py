@@ -98,7 +98,7 @@ def generate_heatmap_from_the_activation_list(layer_activations):
     return heatmap_data
 
 @torch.no_grad
-def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000):
+def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000, plotting=True):
 
     FIRST_BATCH = None
 
@@ -177,9 +177,12 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
     for i in range(len(results_dict['covar_matrix'])):
         results_dict = covariance_matrix_additional_and_projectional(results_dict['covar_matrix'][i], results_dict, device)
 
-    plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 
-    plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'], layer_names=names)
+    if plotting:
+
+        plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
+
+        plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], costume_range=100, pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'], layer_names=names)
     
     # Empty the GPU cache
     del relu_outputs, data_loader, feature_extractor
