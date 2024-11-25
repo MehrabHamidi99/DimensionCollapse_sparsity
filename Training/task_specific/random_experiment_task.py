@@ -17,7 +17,7 @@ import wandb
 from Models.other_models import MLPMixer
 
 
-def random_experiment_hook_engine(architecture, exps=50, num=1000, pre_path='', data_properties={'normal_dist': True, 'loc': 0, 'scale': 1, 'exp_type': 'normal'}, bias=0, model_type='mlp', new_model_each_time=False):
+def random_experiment_hook_engine(architecture, exps=50, num=1000, pre_path='', data_properties={'normal_dist': True, 'loc': 0, 'scale': 1, 'exp_type': 'normal'}, bias: float=0.0, model_type='mlp', new_model_each_time=False):
 
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   this_path = file_name_handling('random_data_random_untrained_network', architecture, num=str(num), exps=exps, 
@@ -38,7 +38,7 @@ def random_experiment_hook_engine(architecture, exps=50, num=1000, pre_path='', 
           model.init_all_weights()
       x, y = create_random_data(input_dimension=architecture[0], num=num, normal_dsit=data_properties['normal_dist'], loc=data_properties['loc'], scale=data_properties['scale'], exp_type=data_properties['exp_type'])
 
-      relu_outputs = hook_forward(feature_extractor, x, y, device)
+      relu_outputs = hook_forward_past(feature_extractor, x, y, device)
 
       results_dict = merge_results(all_analysis_for_hook_engine(relu_outputs, x), results_dict)
 

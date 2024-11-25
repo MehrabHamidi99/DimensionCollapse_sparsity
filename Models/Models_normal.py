@@ -129,13 +129,16 @@ class CIFAR_Res_classifier(nn.Module):
 
         for i, layer in enumerate(self.layers):
             out = layer(x)
-            if i != len(self.layers) - 1:  # Apply ReLU to all except the last layer
-                out = F.relu(out, inplace=False)  # Avoid in-place operation by setting inplace=False
-
             # Add skip connection for every 5 layers
             if i % 5 == 0 and i != 0:
                 out = out + residual  # Avoid in-place addition
                 residual = out.detach()  # Detach to avoid modifying tensor that requires gradient
+            
+            if i != len(self.layers) - 1:  # Apply ReLU to all except the last layer
+                out = F.relu(out, inplace=False)  # Avoid in-place operation by setting inplace=False
+                if i % 5 == 0 and i != 0:
+                    residual = out.detach()  # Detach to avoid modifying tensor that requires gradient
+
             x = out
 
         output = self.log_softmax(x)

@@ -1,37 +1,48 @@
-from Training.task_specifc import random_experiment_task
-import time
-
 import os, sys; sys.path.append(os.path.dirname(os.path.realpath(f'{__file__}/../..')))
-import multiprocessing 
+import argparse
 import time
+import multiprocessing 
 import os
 from functools import partial
 import pickle
 import argparse
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
-import itertools
+from Training.task_specific.random_experiment_task import *
 
 
 if __name__ == '__main__':
 
     starttime = time.time()
 
-    parser = argparse.ArgumentParser(description='')
+    parser_arg = argparse.ArgumentParser(description='')
 
-    parser.add_argument('--mode', metavar='mode', required=True,
-                        help='', type=str2bool, default='custome', choices=['custome', 'depth', 'width', 'single_layer'])
+    parser_arg.add_argument('--mode', metavar='mode', required=True,
+                        help='', type=str, default='custome', choices=['custome', 'depth', 'width', 'single_layer'])
     
-    parser.add_argument('--exp_type', metavar='exp_type', required=True,
-                        help='', type=str2bool, choices=['plane', 'normal', 'line', 'fixed', 'line_d'])
+    parser_arg.add_argument('--exp_type', metavar='exp_type', required=True,
+                        help='', type=str, choices=['plane', 'normal', 'line', 'fixed', 'line_d'])
     
-    parser.add_argument('--try_num', metavar='try_num', required=True, type=int)
+    parser_arg.add_argument('--try_num', metavar='try_num', required=True, type=int)
 
-    parser.add_argument('--bias', metavar='bias', required=False, type=float)
-    parser.add_argument('--new_model', metavar='new_model', required=False, type=bool)
-    parser.add_argument('--scale', metavar='scale', required=False, help='', type=int, default=1)
-    parser.add_argument('--loc', metavar='loc', required=False, help='', type=int, default=0)
+    parser_arg.add_argument('--bias', metavar='bias', required=False, type=float)
+    parser_arg.add_argument('--new_model', metavar='new_model', required=False, type=str2bool)
+    parser_arg.add_argument('--scale', metavar='scale', required=False, help='', type=float, default=1)
+    parser_arg.add_argument('--loc', metavar='loc', required=False, help='', type=float, default=0)
 
-    parser.add_argument('--constant', metavar='contant', required=False, help='', type=int, default=0)
+    # parser_arg.add_argument('--constant', metavar='contant', required=False, help='', type=int, default=0)
+
+    parser = vars(parser_arg.parse_args())
+
+    print(parser)
 
     mode = parser['mode']
 
@@ -42,7 +53,7 @@ if __name__ == '__main__':
     loc = float(parser['loc'])
     new_model_each_time = bool(parser['new_model'])
 
-    constant = int(parser['constant'])
+    # constant = int(parser['constant'])
 
     EXP = 30
     NUM=10000
@@ -54,9 +65,9 @@ if __name__ == '__main__':
         'exp_type': exp_type
     }
 
-    pp = f'november_res/rondom_experiment/{mode}'
+    pp = f'november_res/random_experiment/{mode}'
 
-    elif mode == 'custome':
+    if mode == 'custome':
         archs = [
             (2, [10 for _ in range(5)]),
             (2, [10 for _ in range(20)]),
@@ -87,13 +98,16 @@ if __name__ == '__main__':
             (100, [100 for _ in range(100)]),
 
         ]
-    if mode == 'depth':
-        archs = [(2, [constant for _ in range(i)]) for i in [10, 20, 50, 100,]] + [(constant, [constant for _ in range(i)]) for i in [10, 20, 50, 100]]
+    elif mode == 'depth':
+        archs = []
+        for constant in [5, 20, 40, 80]:
+            archs += [(2, [constant for _ in range(i)]) for i in [10, 20, 50, 100]] + [(constant, [constant for _ in range(i)]) for i in [10, 20, 50, 100]]
 
-   
     elif mode == 'width':
+        archs = []
         init_width = 5
-        archs = [(init_width + i, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 55, 65, 85, 95, 105]] + [(2, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 55, 65, 85, 95, 105]]
+        for constant in [5, 15, 30, 50, 80]:
+            archs += [(init_width + i, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 55, 65, 85, 95, 105]] + [(2, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 55, 65, 85, 95, 105]]
     
     elif mode == 'single_layer':
         archs = [(i, [i]) for i in range(2, 65, 10)]
@@ -101,7 +115,7 @@ if __name__ == '__main__':
         raise Exception("Undefined mode!")
 
 
-    pool = multiprocessing.Pool(processes=40)
+    pool = multiprocessing.Pool(processes=len(archs))
     prod_x=partial(random_experiment_hook_engine, 
                     exps=EXP, 
                     num=NUM, 
