@@ -32,7 +32,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
         criterion = F.mse_loss()
 
     # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, 300, eta_min=1e-6, last_epoch=-1, verbose=False)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,80], gamma=0.1)
+    # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,80], gamma=0.1)
 
     print("start training")
 
@@ -53,10 +53,21 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
             loss = loss.detach()
             optimizer.step()
 
-        scheduler.step()
-        current_lr = scheduler.get_last_lr()[0]  # Get the current learning rate
+        # scheduler.step()
+        # current_lr = scheduler.get_last_lr()[0]  # Get the current learning rate
         
         model.eval()
+
+        feature_extractor = ReluExtractor(model, device=device)
+
+        nc_metrics = compute_neural_collapse_metrics(
+            training_data=train_x,
+            training_labels=train_y.clone(),
+            model=model,
+            feature_extractor=feature_extractor,
+            device=device
+        )
+
         val_loss = 0
         correct = 0
         
@@ -83,7 +94,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
             print(f"Model saved at epoch {epoch + 1}")
             
             # Call the analysis function and save the results
-            fixed_model_batch_analysis(model, train_x, train_y, device, '{}_{}'.format(save_dir, 'train_'),  '{}_'.format(status, str(epoch)), batch_size=analye_b_size)
+            fixed_model_batch_analysis(model, train_x, train_y.clone(), device, '{}_{}'.format(save_dir, 'train_'),  '{}_'.format(status, str(epoch)), batch_size=analye_b_size)
             fixed_model_batch_analysis(model, val_x, val_y, device, '{}_{}'.format(save_dir, 'val_'), '{}_'.format(status, str(epoch)), batch_size=analye_b_size)
         
         gc.collect()
@@ -92,24 +103,26 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
         process = psutil.Process()
         memory_info = process.memory_info().rss / 1024 **2
 
+        wandb_log = {
+            "Train Loss": loss,
+            # "gpu_memory_allocated_MB": gpu_memory_allocated,
+            # "gpu_memory_reserved_MB": gpu_memory_reserved,
+            "Val Loss": val_loss, 
+            "Val Arrucary": accuracy,
+        }
+        wandb_log.update(nc_metrics)
         
         # Log GPU memory usage manually
-        gpu_memory_allocated = torch.cuda.memory_allocated() / 1024 ** 2  # Convert to MB
-        gpu_memory_reserved = torch.cuda.memory_reserved() / 1024 ** 2  # Convert to MB
-        wandb.log({
-            "Train Loss": loss,
-            "gpu_memory_allocated_MB": gpu_memory_allocated,
-            "gpu_memory_reserved_MB": gpu_memory_reserved,
-            "Val Loss": val_loss, 
-            "Arrucary": accuracy,
-            "CPU memory": memory_info
-        })
+        # gpu_memory_allocated = torch.cuda.memory_allocated() / 1024 ** 2  # Convert to MB
+        # gpu_memory_reserved = torch.cuda.memory_reserved() / 1024 ** 2  # Convert to MB
+        wandb.log(wandb_log)
 
         # Write results to the file
         with open(result_file_path, "a") as f:
             f.write(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {accuracy:.2f}%\n')
 
-        print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {accuracy:.2f}%, Learning Rate: {current_lr:.6f}')
+        # print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {accuracy:.2f}%, Learning Rate: {current_lr:.6f}')
+        print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {accuracy:.2f}%')
 
     
     print("Training Complete")
@@ -159,7 +172,7 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
         criterion = F.mse_loss()
 
     # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, 300, eta_min=1e-6, last_epoch=-1, verbose=False)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,80], gamma=0.1)
+    # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,80], gamma=0.1)
 
     print("start training")
 
@@ -197,8 +210,8 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
         # loss_spike.backward()
         # optimizer.step()
 
-        scheduler.step()
-        current_lr = scheduler.get_last_lr()[0]  # Get the current learning rate
+        # scheduler.step()
+        # current_lr = scheduler.get_last_lr()[0]  # Get the current learning rate
         
         model.eval()
         feature_extractor = ReluExtractor(model, device=device)
@@ -271,7 +284,8 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
         with open(result_file_path, "a") as f:
             f.write(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.2f}%\n')
 
-        print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.2f}%, Learning Rate: {current_lr:.6f}')
+        # print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.2f}%, Learning Rate: {current_lr:.6f}')
+        print(f'Epoch {epoch+1}/{epochs}, Val loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.2f}%')
 
     
     print("Training Complete")

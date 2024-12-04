@@ -141,10 +141,11 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
     # Create 8 figures, each containing all frames for one of the subplots
     for i in range(7):
         fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(25 + grid_size[0], 15 + grid_size[1]))
-        axs = axs.flatten()
+        axs_ = axs.flatten()
+        ax_3d = []
 
         for frame in range(num_frames):
-            fig_ax = axs[frame]
+            fig_ax = axs_[frame]
 
             if len(layer_names) > 0:
                 subplot_title = layer_names
@@ -163,22 +164,24 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
             elif i == 4:
                 plot_data_projection(fig_ax, frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels, add_legend=False)
             elif i == 5:
-                axs[frame].remove()
+                axs_[frame].remove()
+                # fig.delaxes(axs[1])
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
-                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels, add_legend=False)
+                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels, add_legend=False, font_size=10)
+                ax_3d.append(fig_ax)
             elif i == 6:
-                axs[frame].remove()
+                # axs_[frame].remove()
+                axs_[frame].remove()
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
-                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels, add_legend=False)
+                # axs[frame] = fig_ax
+                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels, add_legend=False, font_size=10)
+                ax_3d.append(fig_ax)
 
             if len(layer_names) > 0:
                 fig_ax.set_title(layer_names[frame])
             else:
                 subplot_title = 'layers: '
                 fig_ax.set_title(f'layers: {frame}')
-    
-        _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
-
         # Hide any empty subplots
         for j in range(num_frames, len(axs)):
             axs[j].axis('off')
@@ -191,6 +194,7 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
         for ax_col in axs.reshape(grid_size)[:, 1:].flatten():
             ax_col.set_ylabel('')
             ax_col.set_yticks([])
+
             
         # for ax_row in axs.reshape(grid_size)[-1, :]:
         #     ax_row.set_xlabel('X-axis')
@@ -199,6 +203,9 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
 
         fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
         plt.close(fig)
+        
+    _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
+
 
 
 def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
@@ -237,7 +244,7 @@ def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
         loop=0
     )
 
-def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all: list = [], new=False, add_legend=True):
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all: list = [], new=False, add_legend=True, font_size=16):
     # print(counter)
     ax.cla()
 
@@ -282,7 +289,10 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     # eigenvectors_2d = eigenvectors[0]
     # ax.clear()
 
-    labels = labels_all[0]
+    if len(labels_all) == 0:
+        labels = np.ones(len(anim_pieces[counter][0]))
+    else:
+        labels = labels_all[0]
     
     # Find unique labels and the number of unique classes
     unique_labels = np.unique(labels)
@@ -310,34 +320,35 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     
     # If labels are provided, add a legend
     if labels is not None:
-        if add_legend:
-            # Create a list of legend handles
-            handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[label],  # type: ignore
-                                markersize=8, label=f'Class {label}') for label in unique_labels]
-            
-            # Add the legend to the axis
-            ax.legend(handles=handles, title="Classes", loc="best")
+        if num_classes > 1:
+            if add_legend:
+                # Create a list of legend handles
+                handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[label],  # type: ignore
+                                    markersize=8, label=f'Class {label}') for label in unique_labels]
+                
+                # Add the legend to the axis
+                ax.legend(handles=handles, title="Classes", loc="best")
     
     ax.grid(True)
 
     if type_analysis == 'pca':
-        ax.set_xlabel('First Principal Component')
-        ax.set_ylabel('Second Principal Component')
+        ax.set_xlabel('First Principal Component', fontsize=font_size)
+        ax.set_ylabel('Second Principal Component', fontsize=font_size)
         if dim == 2:
             # ax.quiver([0, 0], eigenvectors[0][:, -1][0], eigenvectors[0][:, -1][1])
             # ax.quiver([0, 0], eigenvectors[0][:, -2][0], eigenvectors[0][:, -2][1])
             ax.set_title('Data in First Two Principal Components')
         if dim == 3:
-            ax.set_zlabel('Third Principal Component')
+            ax.set_zlabel('Third Principal Component', fontsize=font_size)
             ax.set_title('Data in First Three Principal Components')
     elif type_analysis == 'random':
-        ax.set_xlabel('First Random Diemnsion')
-        ax.set_ylabel('Second Random Dimension')
+        ax.set_xlabel('First Random Diemnsion', fontsize=font_size)
+        ax.set_ylabel('Second Random Dimension', fontsize=font_size)
         ax.set_title('Data in Two Random Dimension')
         if dim == 2:
             ax.set_title('Data in Two Random Dimension')
         if dim == 3:
-            ax.set_zlabel('Third Random Dimension')
+            ax.set_zlabel('Third Random Dimension', fontsize=font_size)
             ax.set_title('Data in Three Random Dimension')
     if type(title) is list:
         ax.set_title(title[counter])

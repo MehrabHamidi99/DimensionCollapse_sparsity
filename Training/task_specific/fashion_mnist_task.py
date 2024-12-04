@@ -15,7 +15,7 @@ import numpy as np
 import wandb
 
 
-def fashion_mnist_training_analysis_hook_engine(try_num, archirecture=(784, [256, 128, 64, 32, 10]), epochs=100, pre_path='', bias=1e-4):
+def fashion_mnist_training_analysis_hook_engine(try_num, archirecture=(784, [256, 128, 64, 32, 10]), epochs=100, pre_path='', bias=1e-4, debug=False):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -29,12 +29,13 @@ def fashion_mnist_training_analysis_hook_engine(try_num, archirecture=(784, [256
     func_loader = get_fashion_mnist_data_loaders
     train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels = func_loader(batch_size=64)
     
-    wandb.login(key="6e39572f3cebe5c6b8020ae79454587397fd5f43")
+    if not debug:
+        wandb.login(key="6e39572f3cebe5c6b8020ae79454587397fd5f43")
 
-    # Initialize a wandb run
-    wandb.init(project="{}_{}".format(pre_path, str(try_num)))
-    # Enable logging of GPU utilization
-    wandb.config.update({"track_gpu": True})
+        # Initialize a wandb run
+        wandb.init(project="{}_{}".format(pre_path.replace("\\", "_").replace("/", "_"), str(try_num)))
+        # Enable logging of GPU utilization
+        wandb.config.update({"track_gpu": True})
 
     over_path = this_path + "untrained_"
     fixed_model_batch_analysis(model, train_samples, train_labels, device, '{}_{}'.format(over_path, 'train_'), '784, [256, 128, 64, 32, 10]')
@@ -47,7 +48,7 @@ def fashion_mnist_training_analysis_hook_engine(try_num, archirecture=(784, [256
     create_gif_from_plots(this_path, f'{this_path}/val_plots_animation.gif', plot_type='val')
 
 
-def fashion_mnist_training_spike_loss(try_num, archirecture=(784, [256, 128, 64, 32, 10]), epochs=100, pre_path='', bias=1e-4):
+def fashion_mnist_training_spike_loss(try_num, archirecture=(784, [256, 128, 64, 32, 10]), epochs=100, pre_path='', bias=1e-4, debug=False):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -60,12 +61,14 @@ def fashion_mnist_training_spike_loss(try_num, archirecture=(784, [256, 128, 64,
     func_loader = get_fashion_mnist_data_loaders
     train_loader, val_loader, test_loader, train_samples, train_labels, val_samples, val_labels, test_samples, test_labels = func_loader(batch_size=64)
     
-    wandb.login(key="6e39572f3cebe5c6b8020ae79454587397fd5f43")
 
-    # Initialize a wandb run
-    wandb.init(project="{}_{}".format(pre_path, str(try_num)))
-    # Enable logging of GPU utilization
-    wandb.config.update({"track_gpu": True})
+    if not debug:
+        wandb.login(key="6e39572f3cebe5c6b8020ae79454587397fd5f43")
+
+        # Initialize a wandb run
+        wandb.init(project="{}_{}".format(pre_path.replace("\\", "_").replace("/", "_"), str(try_num)))
+        # Enable logging of GPU utilization
+        wandb.config.update({"track_gpu": True})
 
     over_path = this_path + "untrained_"
     fixed_model_batch_analysis(model, train_samples, train_labels, device, '{}_{}'.format(over_path, 'train_'), '784, [256, 128, 64, 32, 10]')

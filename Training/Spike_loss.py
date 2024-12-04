@@ -9,6 +9,7 @@ import torch
 from Data.DataLoader import get_simple_data_loader, get_data_loader
 from Models.ForwardPass import hook_forward_train
 
+from scipy.linalg import eigh
 
 def spike_detection_nd(points, max_hyperplanes=30, min_points_for_hyperplane=100, residual_threshold=0.5, merge_threshold=0.01):
     residual_threshold *= (points.shape[1] - 1)
@@ -252,24 +253,41 @@ def assign_points_to_hyperplanes(points, hyperplanes):
         n_hyperplanes = len(hyperplanes)
 
         # Prepare hyperplane coefficients and intercepts
-        coefs = torch.Tensor([h[0] for h in hyperplanes]).to(points.device)
-        intercepts = torch.Tensor([h[1] for h in hyperplanes]).to(points.device)
+        # coefs = torch.Tensor([h[0] for h in hyperplanes]).to(points.device)
+        # intercepts = torch.Tensor([h[1] for h in hyperplanes]).to(points.device)
+
+        coefs = np.array([h[0] for h in hyperplanes])
+        intercepts = np.array([h[1] for h in hyperplanes])
 
         # Calculate distances from each point to each hyperplane
         # Using broadcasting to avoid explicit loops
-        distances = torch.abs(torch.matmul(points, coefs.T) + intercepts) / torch.linalg.norm(coefs, dim=1)
+        # distances = torch.abs(torch.matmul(points, coefs.T) + intercepts) / torch.linalg.norm(coefs, dim=1)
+        distances = np.abs(np.matmul(points, coefs.T) + intercepts) / np.linalg.norm(coefs, axis=1)
 
         # Find the closest hyperplane for each point
-        assignments = torch.argmin(distances, dim=1)
+        # assignments = torch.argmin(distances, dim=1)
+        assignments = np.argmin(distances, axis=1)
 
         # Calculate the total error
-        total_error = torch.sum(torch.min(distances, dim=1)[0])
+        # total_error = torch.sum(torch.min(distances, dim=1)[0])
+        total_error = np.sum(np.min(distances, axis=1)[0])
 
         # Calculate error for each hyperplane
-        hyperplane_errors = [torch.sum(distances[assignments == i, i]) for i in range(n_hyperplanes)]
+        # hyperplane_errors = [torch.sum(distances[assignments == i, i]) for i in range(n_hyperplanes)]
+        hyperplane_errors = [np.sum(distances[assignments == i, i]) for i in range(n_hyperplanes)]
 
         return assignments, total_error, hyperplane_errors
 
+
+def get_2d_pca(data, n_components=2):
+    data = data - np.mean(data)
+    covar_matrix = np.matmul(data.T , data)
+    # Perform PCA
+    d = covar_matrix.shape[0]
+    values, vectors = eigh(covar_matrix, eigvals=(d - 2, d - 1), eigvals_only=False)
+    projected_data = np.dot(data, vectors)
+    
+    return projected_data
 
 def spike_error(relu_outputs, labels, start_layer, device, true_labels=None):
     
@@ -291,14 +309,16 @@ def spike_error(relu_outputs, labels, start_layer, device, true_labels=None):
                 continue
             
             class_data_indices = torch.where(labels == each_label)[0]
-            points = relu_outputs[i][class_data_indices].clone()
+            points = relu_outputs[i][class_data_indices].detach().cpu().numpy()
+            points = get_2d_pca(points)
 
             # detected_hyperplanes, _, _ = spike_detection_nd(points.detach().cpu().numpy())
-            detected_hyperplanes, _, _ = spike_detection_2d_lines(points.detach().cpu().numpy())
+            detected_hyperplanes, _, _ = spike_detection_2d_lines(points)
 
             if len(detected_hyperplanes) > 0:
                 _, total_error_, _ = assign_points_to_hyperplanes(points, detected_hyperplanes)
-                total_error += ((total_error_ / points.shape[0]))
+                # total_error += ((total_error_ / points.shape[0]))
+                total_error += ((total_error_ / 1.0))
     
         # Convert total_error to a differentiable tensor
         # loss += ((total_error / len(torch.unique(labels))) * (i - start_layer + 1))

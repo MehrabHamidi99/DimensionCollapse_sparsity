@@ -53,7 +53,11 @@ def c(m):
     return d2
     # return np.sqrt(d2)  # O (k^2)
 
-def distance_from_origin(vect):
+def distance_from_origin(vect_org):
+    if not torch.is_tensor(vect_org):
+        vect = torch.Tensor(vect_org)
+    else:
+        vect = vect_org.clone()
     # if torch.is_tensor(vect):
     #     # vect_cop = vect.cpu().clone().detach().numpy()
     #     return torch.sqrt(torch.sum(((vect_cop - torch.zeros(vect_cop.shape)) ** 2), axis=1))
@@ -67,10 +71,14 @@ def get_pc_components(data, n_components=2):
     if n_components == 3:
         values, vectors = eigh(covar_matrix, eigvals=(d - 3, d - 1), eigvals_only=False)
         projected_data = np.dot(data, vectors)
-        return projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]
+        if projected_data.shape[1] < 2:
+            return [np.zeros(data[:, 0].shape), np.zeros(data[:, 0].shape), np.zeros(data[:, 0].shape)]
+        return [projected_data[:, -1], projected_data[:, -2], projected_data[:, -3]]
     values, vectors = eigh(covar_matrix, eigvals=(d - 2, d - 1), eigvals_only=False)
     projected_data = np.dot(data, vectors)
-    return projected_data[:, -1], projected_data[:, -2]
+    if projected_data.shape[1] < 2:
+        return [np.zeros(data[:, 0].shape), np.zeros(data[:, 0].shape)]
+    return [projected_data[:, -1], projected_data[:, -2]]
 
 def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvectors=False, partial=False):
     """
@@ -105,22 +113,24 @@ def count_near_zero_eigenvalues(data, threshold=1e-7, return_eigenvectors=False,
 def projection_analysis(data, type_anal, dim):
     if data.shape[1] == 2:
         if dim == 3:
-            return data[:, 0], data[:, 1], np.zeros(data.shape[0])
-        return data[:, 0], data[:, 1]
+            return [data[:, 0], data[:, 1], np.zeros(data.shape[0])]
+        return [data[:, 0], data[:, 1]]
     if data.shape[1] < 2:
-        return data[:, 0], data[:, 0]
+        return [data[:, 0], data[:, 0]]
     if dim == 2:
         if type_anal == 'pca':
             return get_pc_components(data)
         elif type_anal == 'random':
             random_dims  = random.sample(set(list(range(0, data.shape[1]))), dim)
-            return data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]]
+            return [data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]]]
     elif dim == 3:
         if type_anal == 'pca':
             return get_pc_components(data, n_components=3)
         elif type_anal == 'random':
             random_dims  = random.sample(set(list(range(0, data.shape[1]))), dim)
-            return data[0:data.shape[0], random_dims[0]], data[0:data.shape[0], random_dims[1]], data[0:data.shape[0], random_dims[2]]
+            return [data[0:data.shape[0], random_dims[0]],
+                     data[0:data.shape[0], random_dims[1]],
+                       data[0:data.shape[0], random_dims[2]]]
     raise Exception("type or dim set wrong!")
 
 def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_dist=False, loc=0, scale=1, bias=1e-4, exp_type='normal', model_type='mlp', return_pre_path=False, new_model_each_time=False):
@@ -146,7 +156,7 @@ def file_name_handling(which, architecture, num='', exps=1, pre_path='', normal_
     print(this_path)
     return this_path
 
-def calc_spherical_mean_width_v2(this_data, num_directions=1e3):
+def calc_spherical_mean_width_v2(this_data_org, num_directions=1e3):
     """
     Calculate the spherical mean width of the given data using random directions.
 
@@ -158,6 +168,10 @@ def calc_spherical_mean_width_v2(this_data, num_directions=1e3):
     Returns:
         torch.Tensor: The mean spherical width.
     """
+    if not torch.is_tensor(this_data_org):
+        this_data = torch.Tensor(this_data_org)
+    else:
+        this_data = this_data_org.clone()
     # Ensure num_directions is an integer
     num_directions = int(num_directions)
     
@@ -203,12 +217,12 @@ def additional_analysis_for_full_data(this_data, result_dict):
     result_dict['nonzero_eigenvalues_count'].append(tmp[0])
     result_dict['eigenvalues'].append(tmp[1])
     singular_values = np.sqrt(tmp[1])
-    result_dict['stable_rank'].append(np.sum(singular_values) / np.max(singular_values))
+    result_dict['stable_rank'].append(np.sum(singular_values) / (np.max(singular_values) + 1e-7))
     result_dict['simple_spherical_mean_width'].append(2 * np.mean(singular_values))
-    result_dict['spherical_mean_width_v2'].append(calc_spherical_mean_width_v2(this_data))
+    result_dict['spherical_mean_width_v2'].append(calc_spherical_mean_width_v2(this_data).detach().cpu().numpy().tolist())
     
     # cdist(this_data, np.array([np.zeros(this_data.shape[1])]))
-    result_dict['norms'].append(distance_from_origin(this_data))
+    result_dict['norms'].append(distance_from_origin(this_data).detach().cpu().numpy().tolist())
     # [np.mean(distances_this_data), np.max(distances_this_data), np.min(distances_this_data)]
 
     return result_dict

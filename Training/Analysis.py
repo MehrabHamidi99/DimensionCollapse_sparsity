@@ -33,38 +33,48 @@ def all_analysis_for_hook_engine(relu_outputs,  dataset):
         
         layer_act = relu_outputs[i]
 
-        non_zero = np.sum((layer_act > 0).astype(int), axis=0) # D
+        non_zero = np.sum((layer_act.detach().cpu().numpy() > 0).astype(int), axis=0) # D
 
         results['activations'].append(non_zero)
         results['non_zero_activations_layer_wise'].append(np.sum((non_zero > 0).astype(int)))
 
-        cell_dim = np.sum((layer_act > 0).astype(int), axis=1) # B
+        cell_dim = np.sum((layer_act.detach().cpu().numpy() > 0).astype(int), axis=1) # B
 
         results['cell_dimensions'].append(cell_dim)
         results['batch_cell_dimensions'].append(np.min(cell_dim))
 
-        results = additional_analysis_for_full_data(layer_act, results)
-        results = projection_analysis_for_full_data(layer_act, results)
+        results = additional_analysis_for_full_data(layer_act.detach().cpu().numpy(), results)
+        results = projection_analysis_for_full_data(layer_act.detach().cpu().numpy(), results)
 
     results['display_matrix'] = generate_heatmap_from_the_activation_list(results['activations'])
 
     return results        
 
-def merge_results(results_dict, new_result_dict):
+def merge_results(results_dict, new_result_dict, append_ones=['pca_2', 'pca_3', 'random_2', 'random_3']):
     for k, v in results_dict.items():
-        try:
-            if k in new_result_dict:
-                results_dict[k] = (v + new_result_dict[k]) / 2
-        except:
+        if k in append_ones:
+            for j in range(len(v)):
+                for l in range(len(v[j])):
+                    if k in new_result_dict:
+                        results_dict[k][j][l] = np.concatenate([new_result_dict[k][j][l], v[j][l]]) 
+        elif k == 'norms':
+            for j in range(len(v)):
+                if k in new_result_dict:
+                    results_dict[k][j] += new_result_dict[k][j]
+        else:
             try:
-                for j in range(len(v)):
-                    results_dict[k][j] = (v[j] + new_result_dict[k][j]) / 2                
+                if k in new_result_dict:
+                    results_dict[k] = (v + new_result_dict[k]) / 2
             except:
-                for j in range(len(v)):
-                    tmp_res = []
-                    for l in range(len(v[j])):
-                        tmp_res.append((v[j][l] + new_result_dict[k][j][l]) / 2)
-                    results_dict[k][j] = tmp_res
+                try:
+                    for j in range(len(v)):
+                        results_dict[k][j] = (v[j] + new_result_dict[k][j]) / 2                
+                except:
+                    for j in range(len(v)):
+                        tmp_res = []
+                        for l in range(len(v[j])):
+                            tmp_res.append((v[j][l] + new_result_dict[k][j][l]) / 2)
+                        results_dict[k][j] = tmp_res
     return results_dict
 
 def merge_results_batch(results_dict, batch_result_dict, sum_ones=['activations', 'non_zero_activations_layer_wise', 'cell_dimensions', 'batch_cell_dimensions']):
@@ -98,7 +108,7 @@ def generate_heatmap_from_the_activation_list(layer_activations):
     return heatmap_data
 
 @torch.no_grad
-def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000, plotting=True):
+def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000, plotting=True, no_labels=False):
 
     FIRST_BATCH = None
 
@@ -154,7 +164,10 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
         if FIRST_BATCH:
             covariance_matrix = _covar_calc(sample_)
-            results_dict = batch_projectional_analysis(covariance_matrix, sample_, results_dict, FIRST_BATCH, this_index=0, preds=pred)
+            if no_labels:
+                results_dict = batch_projectional_analysis(covariance_matrix, sample_, results_dict, FIRST_BATCH, this_index=0, preds=torch.zeros_like(pred))
+            else:
+                results_dict = batch_projectional_analysis(covariance_matrix, sample_, results_dict, FIRST_BATCH, this_index=0, preds=pred)
 
             results_dict = _add_covar(results_dict, sample_, covariance_matrix)
         else:
@@ -166,7 +179,11 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
         # ـ, relu_outputs = feature_extractor(samples)
 
-        results_dict, FIRST_BATCH, new_labels = _on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample_, pred)
+        if no_labels:
+
+            results_dict, FIRST_BATCH, new_labels = _on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample_, preds=torch.zeros_like(pred))
+        else:
+            results_dict, FIRST_BATCH, new_labels = _on_the_go_analysis(results_dict, relu_outputs, FIRST_BATCH, sample_, pred)
         results_dict['labels'][0].extend(label.detach().cpu().numpy())
         results_dict['this_batch_size'] = results_dict['this_batch_size'] + sample.shape[0]
 

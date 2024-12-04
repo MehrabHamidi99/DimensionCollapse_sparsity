@@ -22,7 +22,7 @@ def hook_forward_past(extractor, dataset, labels, device):
     data_loader = get_data_loader(dataset, labels, batch_size=dataset.shape[0], shuffle=False)
     
     for x, _ in data_loader:
-        x.to(device)
+        x = x.to(device)
         # Get pre-activation and activation values for each layer
         output, relu_outputs = extractor(x)
     # return model.analysis_neurons_activations_depth_wise(dataset.shape[0])

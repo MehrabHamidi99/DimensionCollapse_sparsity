@@ -386,7 +386,9 @@ def compute_neural_collapse_metrics(training_data, training_labels, model, featu
         # Choose dimensionality k_c where cumulative EVR reaches a threshold (e.g., 95%)
         threshold = 0.95
         k_c = torch.searchsorted(cumulative_evr, threshold).item() + 1  # +1 because indices start from 0
-        manifold_dimensions[c] = k_c
+        manifold_dimensions[f'manifold_dimension_class_{c}'] = k_c
+
+    array_man_dim = np.array(list(manifold_dimensions.values()))
 
     results = {
         'NC1': NC1,
@@ -394,8 +396,9 @@ def compute_neural_collapse_metrics(training_data, training_labels, model, featu
         'NC3': NC3,
         'NC4': NC4,
         'total_variance': eigvals.sum().item(),
-        'manifold_dimensions': manifold_dimensions,
-        'mean manifold_dimenaion': np.mean(manifold_dimensions.values())
+        # 'manifold_dimensions': manifold_dimensions,
+        'mean manifold_dimenaion': np.mean(array_man_dim)
     }
+    results.update(manifold_dimensions)
 
     return results

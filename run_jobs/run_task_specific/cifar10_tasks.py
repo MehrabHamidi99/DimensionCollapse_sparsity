@@ -14,9 +14,11 @@ if __name__ == '__main__':
     
     parser_arg.add_argument('--try_num', metavar='try_num', required=True, type=int)
 
-    parser_arg.add_argument('--bias', metavar='bias', required=False, type=float)
+    parser_arg.add_argument('--bias', metavar='bias', required=False, type=float, default=1e-4)
 
     parser = vars(parser_arg.parse_args())
+
+    print(parser)
 
     try_num = int(parser['try_num'])
     bias = float(parser['bias'])
@@ -55,4 +57,7 @@ if __name__ == '__main__':
         arch = (32*32*3, [1024, 512, 256, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 64, 32, 10])
         cifar10_training_analysis_spike_loss_resnet(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
+    if parser['training_mode'] == 'debug':
+        arch = (32*32*3, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
+        cifar10_training_analysis_spike_loss(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias, debug=True)
     

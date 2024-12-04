@@ -36,7 +36,7 @@ def cifar100_training_analysis_hook_engine(try_num, archirecture=(3*32*32, [256,
         wandb.login(key="6e39572f3cebe5c6b8020ae79454587397fd5f43")
 
         # Initialize a wandb run
-        wandb.init(project="{}_{}".format(pre_path, str(try_num)))
+        wandb.init(project="{}_{}".format(pre_path.replace("\\", "_").replace("/", "_"), str(try_num)))
         # Enable logging of GPU utilization
         wandb.config.update({"track_gpu": True})
 

@@ -31,22 +31,24 @@ class MLP_simple(nn.Module):
         output = self.layers(x)
         return output
     
-    def init_all_weights(self):
-        self.apply(self.init_weights)
+    def init_all_weights(self, device='cpu'):
+            self.apply(lambda m: self.init_weights(m))
+            self.to(device)
 
     def init_weights(self, m, init_type='he'):
         if isinstance(m, nn.Linear):
             if init_type == 'he':
-                # Init Weights (Fan-In)
-                # stdv = 1. / torch.sqrt(m.weight.size(1))
-                # m.weight.data.normal_(0, stdv)
+                # Reinitialize weights using He initialization (scaled by init_scale)
+                m.weight.data.normal_(0, torch.sqrt(torch.tensor(2.0 / m.weight.size(1)))) # type: ignore
                 m.weight.data *= self.init_scale / m.weight.norm(
                     dim=tuple(range(1, m.weight.data.ndim)), p=2, keepdim=True
                 )
             elif init_type == 'xavier':
                 nn.init.xavier_normal_(m.weight, gain=1)
 
-            m.bias.data *= self.bias
+            if m.bias is not None:
+                m.bias.data.fill_(self.bias)
+
 
 
 class MNIST_classifier(nn.Module):
@@ -79,22 +81,24 @@ class MNIST_classifier(nn.Module):
         output = self.log_softmax(output)
         return output
     
-    def init_all_weights(self):
-        self.apply(self.init_weights)
+    def init_all_weights(self, device='cpu'):
+            self.apply(lambda m: self.init_weights(m))
+            self.to(device)
 
     def init_weights(self, m, init_type='he'):
         if isinstance(m, nn.Linear):
             if init_type == 'he':
-                # Init Weights (Fan-In)
-                # stdv = 1. / torch.sqrt(m.weight.size(1))
-                # m.weight.data.normal_(0, stdv)
+                # Reinitialize weights using He initialization (scaled by init_scale)
+                m.weight.data.normal_(0, torch.sqrt(torch.tensor(2.0 / m.weight.size(1)))) # type: ignore
                 m.weight.data *= self.init_scale / m.weight.norm(
                     dim=tuple(range(1, m.weight.data.ndim)), p=2, keepdim=True
                 )
             elif init_type == 'xavier':
                 nn.init.xavier_normal_(m.weight, gain=1)
 
-            m.bias.data *= self.bias
+            if m.bias is not None:
+                m.bias.data.fill_(self.bias)
+
 
 
 
@@ -144,19 +148,21 @@ class CIFAR_Res_classifier(nn.Module):
         output = self.log_softmax(x)
         return output
     
-    def init_all_weights(self):
-        self.apply(self.init_weights)
+    def init_all_weights(self, device='cpu'):
+            self.apply(lambda m: self.init_weights(m))
+            self.to(device)
 
     def init_weights(self, m, init_type='he'):
         if isinstance(m, nn.Linear):
             if init_type == 'he':
-                # Init Weights (Fan-In)
-                # stdv = 1. / torch.sqrt(m.weight.size(1))
-                # m.weight.data.normal_(0, stdv)
+                # Reinitialize weights using He initialization (scaled by init_scale)
+                m.weight.data.normal_(0, torch.sqrt(torch.tensor(2.0 / m.weight.size(1)))) # type: ignore
                 m.weight.data *= self.init_scale / m.weight.norm(
                     dim=tuple(range(1, m.weight.data.ndim)), p=2, keepdim=True
                 )
             elif init_type == 'xavier':
                 nn.init.xavier_normal_(m.weight, gain=1)
 
-            m.bias.data *= self.bias
+            if m.bias is not None:
+                m.bias.data.fill_(self.bias)
+

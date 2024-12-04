@@ -38,6 +38,8 @@ if __name__ == '__main__':
     parser_arg.add_argument('--scale', metavar='scale', required=False, help='', type=float, default=1)
     parser_arg.add_argument('--loc', metavar='loc', required=False, help='', type=float, default=0)
 
+    parser_arg.add_argument('--debug', metavar='debug', required=False, help='', type=str2bool, default=False)
+
     # parser_arg.add_argument('--constant', metavar='contant', required=False, help='', type=int, default=0)
 
     parser = vars(parser_arg.parse_args())
@@ -56,7 +58,7 @@ if __name__ == '__main__':
     # constant = int(parser['constant'])
 
     EXP = 30
-    NUM=10000
+    NUM=5000
 
     data_prop = {
         'normal_dist': True, 
@@ -65,65 +67,77 @@ if __name__ == '__main__':
         'exp_type': exp_type
     }
 
-    pp = f'november_res/random_experiment/{mode}'
+    pp = f'/network/scratch/m/mehrab.hamidi/november_res/random_experiment/{mode}'
 
     if mode == 'custome':
         archs = [
             (2, [10 for _ in range(5)]),
-            (2, [10 for _ in range(20)]),
-            (2, [10 for _ in range(60)]),
+            (2, [10 for _ in range(23)]),
+            (2, [10 for _ in range(63)]),
             
             (2, [30 for _ in range(5)]),
-            (2, [30 for _ in range(20)]),
-            (2, [30 for _ in range(60)]),
+            (2, [30 for _ in range(23)]),
+            (2, [30 for _ in range(63)]),
             
             (2, [100 for _ in range(5)]),
-            (2, [100 for _ in range(20)]),
-            (2, [100 for _ in range(60)]),
+            (2, [100 for _ in range(23)]),
+            (2, [100 for _ in range(63)]),
 
 
             (10, [10 for _ in range(5)]),
-            (10, [10 for _ in range(20)]),
-            (10, [10 for _ in range(60)]),
+            (10, [10 for _ in range(23)]),
+            (10, [10 for _ in range(63)]),
             
             (30, [30 for _ in range(5)]),
-            (30, [30 for _ in range(20)]),
-            (30, [30 for _ in range(60)]),
+            (30, [30 for _ in range(23)]),
+            (30, [30 for _ in range(63)]),
             
             (100, [100 for _ in range(5)]),
-            (100, [100 for _ in range(20)]),
-            (100, [100 for _ in range(60)]),
+            (100, [100 for _ in range(23)]),
+            (100, [100 for _ in range(63)]),
 
 
-            (100, [100 for _ in range(100)]),
+            (100, [100 for _ in range(111)]),
 
         ]
     elif mode == 'depth':
         archs = []
         for constant in [5, 20, 40, 80]:
-            archs += [(2, [constant for _ in range(i)]) for i in [10, 20, 50, 100]] + [(constant, [constant for _ in range(i)]) for i in [10, 20, 50, 100]]
+            archs += [(2, [constant for _ in range(i)]) for i in [11, 23, 53, 111]] + [(constant, [constant for _ in range(i)]) for i in [11, 23, 53, 111]]
 
     elif mode == 'width':
         archs = []
         init_width = 5
-        for constant in [5, 15, 30, 50, 80]:
-            archs += [(init_width + i, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 55, 65, 85, 95, 105]] + [(2, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 55, 65, 85, 95, 105]]
+        for constant in [5, 15, 31, 53, 83]:
+            archs += [(init_width + i, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 65, 85, 105]] + [(2, [init_width + i for _ in range(constant)]) for i in [0, 5, 10, 25, 55, 65, 85, 95, 105]]
     
     elif mode == 'single_layer':
         archs = [(i, [i]) for i in range(2, 65, 10)]
     else:
         raise Exception("Undefined mode!")
 
+    if parser['debug']:
+        for arch in archs:
+            pp += '/debug'
+            random_experiment_hook_engine(arch, exps=EXP, 
+                                            num=NUM, 
+                                            data_properties=data_prop,
+                                            pre_path='{}/'.format(pp), 
+                                            bias=bias,
+                                            model_type='mlp', 
+                                            new_model_each_time=new_model_each_time,
+                                            new_data_each_time=True)
 
-    pool = multiprocessing.Pool(processes=len(archs))
-    prod_x=partial(random_experiment_hook_engine, 
-                    exps=EXP, 
-                    num=NUM, 
-                    data_properties=data_prop,
-                    pre_path='{}/'.format(pp), 
-                    bias=bias,
-                    model_type='mlp', 
-                    new_model_each_time=new_model_each_time
-                    )
-    pool.map(prod_x, archs)
+    else:
+        pool = multiprocessing.Pool(processes=min(40, len(archs)))
+        prod_x=partial(random_experiment_hook_engine, 
+                        exps=EXP, 
+                        num=NUM, 
+                        data_properties=data_prop,
+                        pre_path='{}/'.format(pp), 
+                        bias=bias,
+                        model_type='mlp', 
+                        new_model_each_time=new_model_each_time
+                        )
+        pool.map(prod_x, archs)
 
