@@ -300,7 +300,7 @@ def compute_neural_collapse_metrics(training_data, training_labels, model, featu
     G_ETF = (I_K - (1 / K) * (ones_K @ ones_K.t())) / np.sqrt(K - 1)
 
     # Convert G_ETF to torch.Tensor
-    G_ETF = torch.tensor(G_ETF, dtype=torch.float32).detach()
+    G_ETF = torch.tensor(G_ETF, dtype=torch.float32).clone().detach()
 
     # Compute NC2
     NC2 = torch.norm(G_norm - G_ETF, p='fro').item()

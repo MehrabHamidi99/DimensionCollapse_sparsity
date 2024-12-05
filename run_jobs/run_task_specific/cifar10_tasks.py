@@ -58,6 +58,6 @@ if __name__ == '__main__':
         cifar10_training_analysis_spike_loss_resnet(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
     if parser['training_mode'] == 'debug':
-        arch = (32*32*3, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
-        cifar10_training_analysis_spike_loss(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias, debug=True)
+        arch = (32*32*3, [512, 256, 128, 64, 32, 10])
+        cifar10_training_analysis_spike_loss_resnet(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias, debug=True)
     

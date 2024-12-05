@@ -313,7 +313,7 @@ def spike_error(relu_outputs, labels, start_layer, device, true_labels=None):
             points = get_2d_pca(points)
 
             # detected_hyperplanes, _, _ = spike_detection_nd(points.detach().cpu().numpy())
-            detected_hyperplanes, _, _ = spike_detection_2d_lines(points)
+            detected_hyperplanes, _, _ = spike_detection_nd(points)
 
             if len(detected_hyperplanes) > 0:
                 _, total_error_, _ = assign_points_to_hyperplanes(points, detected_hyperplanes)

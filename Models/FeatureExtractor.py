@@ -5,7 +5,7 @@ from torch.utils.hooks import RemovableHandle
 import contextlib
 
 @contextlib.contextmanager
-def collect_activations(module: nn.Module):
+def collect_activations(module: nn.Module, select_list):
 
     activations: list[torch.Tensor] = []
     handles: list[RemovableHandle] = []
@@ -18,7 +18,7 @@ def collect_activations(module: nn.Module):
     for name, module in module.named_modules():
         # if isinstance(module, nn.ReLU) or isinstance(module, nn.LogSoftmax):
         # if isinstance(module, nn.Linear):
-        if isinstance(module, nn.ReLU):
+        if isinstance(module, select_list):
             handle = module.register_forward_hook(_save_activation_hook)
             handles.append(handle)
             names.append(name)
@@ -32,11 +32,13 @@ def collect_activations(module: nn.Module):
 
 
 class ReluExtractor(nn.Module):
-    def __init__(self, model, device):
+    def __init__(self, model: nn.Module, device: torch.device, select_list: tuple = (nn.ReLU,)):
         super(ReluExtractor, self).__init__()
         self.model = model.to(device)
+        self.select_list = select_list
+
     def forward(self, x, names=False):
-        with collect_activations(self.model) as activations:
+        with collect_activations(self.model, self.select_list) as activations:
             with torch.no_grad():
                 output = self.model(x)
         if names:

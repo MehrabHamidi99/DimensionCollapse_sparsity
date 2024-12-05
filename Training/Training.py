@@ -14,7 +14,7 @@ import torch.optim as optim
 from Training.Neural_collapse import *
 from Training.Spike_loss import *
 
-def train_model(model, train_loader, test_loader, base_path, train_x, train_y, val_x, val_y, test_x, test_y, val_loader=None, epochs=100, learning_rate=0.001, loss='crossentropy', optimizer='adam', analye_b_size=10000, status='default'):
+def train_model(model, train_loader, test_loader, base_path, train_x, train_y, val_x, val_y, test_x, test_y, val_loader=None, epochs=100, learning_rate=0.001, loss='crossentropy', optimizer='adam', analye_b_size=10000, status='default', default_select_list=(nn.ReLU,)):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -58,7 +58,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
         
         model.eval()
 
-        feature_extractor = ReluExtractor(model, device=device)
+        feature_extractor = ReluExtractor(model, device=device, select_list=default_select_list)
 
         nc_metrics = compute_neural_collapse_metrics(
             training_data=train_x,
@@ -129,24 +129,6 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
 
     fixed_model_batch_analysis(model, test_x, test_y, device, '{}_{}'.format(base_path, 'test_'), status, batch_size=analye_b_size)
 
-    # Final stats calculation
-    def print_stats(loader, mode):
-        loss = 0
-        correct = 0
-        model.eval()
-        with torch.no_grad():
-            for data, target in loader:
-                data, target = data.to(device), target.to(device)
-                output = model(data)
-                loss += criterion(output, target).item()
-                pred = torch.exp(output).argmax(dim=1, keepdim=True)
-                correct += pred.eq(target.view_as(pred)).sum().item()
-
-        loss /= len(loader.dataset)
-        accuracy = 100. * correct / len(loader.dataset)
-        with open(result_file_path, "a") as f:
-            f.write(f'{mode} loss: {loss:.4f}, Accuracy: {accuracy:.2f}%\n')
-
     # Write the final stats for train, validation, and test sets
     print_stats(train_loader, 'train')
     print_stats(val_loader, 'val')
@@ -154,7 +136,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
 
 
 
-def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x, train_y, val_x, val_y, test_x, test_y, val_loader=None, epochs=400, learning_rate=0.001, loss='crossentropy', optimizer='adam', analye_b_size=10000, status='default'):
+def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x, train_y, val_x, val_y, test_x, test_y, val_loader=None, epochs=400, learning_rate=0.001, loss='crossentropy', optimizer='adam', analye_b_size=10000, status='default', default_select_list=(nn.ReLU,)):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -214,7 +196,7 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
         # current_lr = scheduler.get_last_lr()[0]  # Get the current learning rate
         
         model.eval()
-        feature_extractor = ReluExtractor(model, device=device)
+        feature_extractor = ReluExtractor(model, device=device, select_list=default_select_list)
 
         nc_metrics = compute_neural_collapse_metrics(
             training_data=train_x,
@@ -292,25 +274,26 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
 
     fixed_model_batch_analysis(model, test_x, test_y, device, '{}_{}'.format(base_path, 'test_'), status, batch_size=analye_b_size)
 
-    # Final stats calculation
-    def print_stats(loader, mode):
-        loss = 0
-        correct = 0
-        model.eval()
-        with torch.no_grad():
-            for data, target in loader:
-                data, target = data.to(device), target.to(device)
-                output = model(data)
-                loss += criterion(output, target).item()
-                pred = torch.exp(output).argmax(dim=1, keepdim=True)
-                correct += pred.eq(target.view_as(pred)).sum().item()
-
-        loss /= len(loader.dataset)
-        accuracy = 100. * correct / len(loader.dataset)
-        with open(result_file_path, "a") as f:
-            f.write(f'{mode} loss: {loss:.4f}, Accuracy: {accuracy:.2f}%\n')
-
     # Write the final stats for train, validation, and test sets
     print_stats(train_loader, 'train')
     print_stats(val_loader, 'val')
     print_stats(test_loader, 'test')
+
+
+# Final stats calculation
+def print_stats(loader, mode):
+    loss = 0
+    correct = 0
+    model.eval()
+    with torch.no_grad():
+        for data, target in loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            loss += criterion(output, target).item()
+            pred = torch.exp(output).argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    loss /= len(loader.dataset)
+    accuracy = 100. * correct / len(loader.dataset)
+    with open(result_file_path, "a") as f:
+        f.write(f'{mode} loss: {loss:.4f}, Accuracy: {accuracy:.2f}%\n')
