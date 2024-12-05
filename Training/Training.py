@@ -58,7 +58,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
         
         model.eval()
 
-        feature_extractor = ReluExtractor(model, device=device, select_list=default_select_list)
+        feature_extractor = ReluExtractor(model, device=device, select_list=(nn.Linear(),))
 
         nc_metrics = compute_neural_collapse_metrics(
             training_data=train_x,
@@ -165,7 +165,7 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
 
     for epoch in tqdm(range(epochs)):
         model.train()
-        feature_extractor = ReluExtractor(model, device=device)
+        feature_extractor = ReluExtractor(model, device=device, select_list=default_select_list)
 
         loss_tracker = 0
         i = 0
@@ -196,7 +196,7 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
         # current_lr = scheduler.get_last_lr()[0]  # Get the current learning rate
         
         model.eval()
-        feature_extractor = ReluExtractor(model, device=device, select_list=default_select_list)
+        feature_extractor = ReluExtractor(model, device=device, select_list=(nn.Linear,))
 
         nc_metrics = compute_neural_collapse_metrics(
             training_data=train_x,
