@@ -65,7 +65,7 @@ class CIFAR_Res_classifier(nn.Module):
         for i in range(1, len(layer_list)):
             in_features = layer_list[i - 1]
             out_features = layer_list[i]
-            self.layers.add_module(f"resnet_block_{i}", ResNetBlock(in_features, out_features, res_net_dim, depth=res_block_depth))
+            self.layers.add_module(f"resnet_block_{i}", ResNetBlock(in_features, out_features, out_features, depth=res_block_depth))
         
         # Add a final linear layer before output, matching the output size
         self.layers.add_module("last_layer_classifier", nn.Linear(self.layer_list[-1], self.layer_list[-1]))

@@ -28,12 +28,12 @@ if __name__ == '__main__':
     saved_path = f'november_res/kuji_mnist/{training_mode}/bias_{bias}'
 
     if parser['training_mode'] == 'normal':
-        arch = (784, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
+        arch = (784, [256, 128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
         kuji_mnist_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
     #####################
 
     if parser['training_mode'] == 'spike_loss':
-        arch = (784, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
+        arch = (784, [256, 128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
         kuji_mnist_training_analysis_spike_loss(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
 

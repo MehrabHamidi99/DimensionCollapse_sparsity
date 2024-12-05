@@ -28,21 +28,21 @@ if __name__ == '__main__':
     saved_path = f'november_res/cifar10/{training_mode}/bias_{bias}'
     
     if parser['training_mode'] == 'normal':
-        arch = (32*32*3, [1024, 784, 784, 512, 256, 256, 128, 128, 64, 64, 32, 32, 10, 10])
+        arch = (32*32*3, [1024, 784, 784, 512, 311, 311, 256, 256, 128, 128, 64, 64, 32, 32, 10, 10])
         cifar10_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
     if parser['training_mode'] == 'normal_three_class':
-        arch = (32*32*3, [1024, 512, 256, 256, 128, 128, 64, 64, 32, 32, 10, 3])
+        arch = (32*32*3, [1024, 784, 784, 512, 311, 311, 256, 256, 128, 128, 64, 64, 32, 32, 10, 3])
         three_class_cifar10_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
 
     #####################
 
     if parser['training_mode'] == 'spike_loss':
-        arch = (32*32*3, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
+        arch = (32*32*3, [1024, 784, 784, 512, 311, 311, 256, 256, 128, 128, 64, 64, 32, 32, 10, 10])
         cifar10_training_analysis_spike_loss(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
     if parser['training_mode'] == 'spike_loss_three_class':
-        arch = (32*32*3, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10, 3])
+        arch = (32*32*3, [1024, 784, 784, 512, 311, 311, 256, 256, 128, 128, 64, 64, 32, 32, 10, 3])
         three_class_cifar10_training_analysis_spike_loss(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
    
     ##################
@@ -53,8 +53,8 @@ if __name__ == '__main__':
 
     ##################
 
-    if parser['training_mode'] == 'res_net':
-        arch = (32*32*3, [1024, 512, 256, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 64, 32, 10])
+    if parser['training_mode'] == 'res_net': # 19
+        arch = (32*32*3, [1024, 1024, 1024, 511, 511, 511, 255, 255, 255, 127, 127, 127, 64, 64, 64, 64, 32, 32, 32, 19, 10])
         cifar10_training_analysis_spike_loss_resnet(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
     if parser['training_mode'] == 'debug':

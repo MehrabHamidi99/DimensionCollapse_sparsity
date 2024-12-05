@@ -253,28 +253,28 @@ def assign_points_to_hyperplanes(points, hyperplanes):
         n_hyperplanes = len(hyperplanes)
 
         # Prepare hyperplane coefficients and intercepts
-        # coefs = torch.Tensor([h[0] for h in hyperplanes]).to(points.device)
-        # intercepts = torch.Tensor([h[1] for h in hyperplanes]).to(points.device)
+        coefs = torch.Tensor(np.array([h[0] for h in hyperplanes])).to(points.device)
+        intercepts = torch.Tensor(np.array([h[1] for h in hyperplanes])).to(points.device)
 
-        coefs = np.array([h[0] for h in hyperplanes])
-        intercepts = np.array([h[1] for h in hyperplanes])
+        # coefs = np.array([h[0] for h in hyperplanes])
+        # intercepts = np.array([h[1] for h in hyperplanes])
 
         # Calculate distances from each point to each hyperplane
         # Using broadcasting to avoid explicit loops
-        # distances = torch.abs(torch.matmul(points, coefs.T) + intercepts) / torch.linalg.norm(coefs, dim=1)
-        distances = np.abs(np.matmul(points, coefs.T) + intercepts) / np.linalg.norm(coefs, axis=1)
+        distances = torch.abs(torch.matmul(points, coefs.T) + intercepts) / torch.linalg.norm(coefs, dim=1)
+        # distances = np.abs(np.matmul(points, coefs.T) + intercepts) / np.linalg.norm(coefs, axis=1)
 
         # Find the closest hyperplane for each point
-        # assignments = torch.argmin(distances, dim=1)
-        assignments = np.argmin(distances, axis=1)
+        assignments = torch.argmin(distances, dim=1)
+        # assignments = np.argmin(distances, axis=1)
 
         # Calculate the total error
-        # total_error = torch.sum(torch.min(distances, dim=1)[0])
-        total_error = np.sum(np.min(distances, axis=1)[0])
+        total_error = torch.sum(torch.min(distances, dim=1)[0])
+        # total_error = np.sum(np.min(distances, axis=1)[0])
 
         # Calculate error for each hyperplane
-        # hyperplane_errors = [torch.sum(distances[assignments == i, i]) for i in range(n_hyperplanes)]
-        hyperplane_errors = [np.sum(distances[assignments == i, i]) for i in range(n_hyperplanes)]
+        hyperplane_errors = [torch.sum(distances[assignments == i, i]) for i in range(n_hyperplanes)]
+        # hyperplane_errors = [np.sum(distances[assignments == i, i]) for i in range(n_hyperplanes)]
 
         return assignments, total_error, hyperplane_errors
 
@@ -309,20 +309,22 @@ def spike_error(relu_outputs, labels, start_layer, device, true_labels=None):
                 continue
             
             class_data_indices = torch.where(labels == each_label)[0]
-            points = relu_outputs[i][class_data_indices].detach().cpu().numpy()
-            points = get_2d_pca(points)
+            points = relu_outputs[i][class_data_indices]
 
-            # detected_hyperplanes, _, _ = spike_detection_nd(points.detach().cpu().numpy())
-            detected_hyperplanes, _, _ = spike_detection_nd(points)
+            # points = relu_outputs[i][class_data_indices].detach().cpu().numpy()
+            # points = get_2d_pca(points)
+
+            detected_hyperplanes, _, _ = spike_detection_nd(points.detach().cpu().numpy())
+            # detected_hyperplanes, _, _ = spike_detection_nd(points)
 
             if len(detected_hyperplanes) > 0:
                 _, total_error_, _ = assign_points_to_hyperplanes(points, detected_hyperplanes)
-                # total_error += ((total_error_ / points.shape[0]))
-                total_error += ((total_error_ / 1.0))
+                total_error += ((total_error_ / points.shape[0]))
+                # total_error += ((total_error_ / 1.0))
     
         # Convert total_error to a differentiable tensor
-        # loss += ((total_error / len(torch.unique(labels))) * (i - start_layer + 1))
-        loss += (total_error / len(torch.unique(labels)))
+        loss += (((total_error / len(torch.unique(labels))) * (i - start_layer + 1)) * 2)
+        # loss += (total_error / len(torch.unique(labels)))
     
     return loss
 
@@ -351,7 +353,7 @@ def spike_loss(traning_data, training_labels, optimizer, feature_extractor, devi
     
     # loss /= i
 
-    return loss_tracker / i
+    return loss_tracker
 
     # loss = torch.tensor(0, dtype=torch.float32).to(device)
     # i = 0

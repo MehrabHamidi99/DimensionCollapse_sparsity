@@ -58,7 +58,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
         
         model.eval()
 
-        feature_extractor = ReluExtractor(model, device=device, select_list=(nn.Linear(),))
+        feature_extractor = ReluExtractor(model, device=device, select_list=(nn.Linear,))
 
         nc_metrics = compute_neural_collapse_metrics(
             training_data=train_x,
