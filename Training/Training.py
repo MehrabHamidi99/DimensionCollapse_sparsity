@@ -83,7 +83,7 @@ def train_model(model, train_loader, test_loader, base_path, train_x, train_y, v
         accuracy = 100. * correct / len(val_loader.dataset)
 
         # Save model every 10 epochs
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 10 == 0 or epoch < 10:
             # Create directory for the current set of 10 epochs
             save_dir = base_path + f"epoch_{epoch+1}/"
             if not os.path.exists(save_dir):
@@ -220,7 +220,7 @@ def train__with_spike_loss(model, train_loader, test_loader, base_path, train_x,
         val_accuracy = 100. * correct / len(val_loader.dataset)
 
         # Save model every 10 epochs
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 10 == 0 or epoch < 10:
             # Create directory for the current set of 10 epochs
             save_dir = base_path + f"epoch_{epoch+1}/"
             if not os.path.exists(save_dir):

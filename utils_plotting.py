@@ -89,7 +89,33 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
     ax.set_ylabel('Frequency')
 
 
-def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = []):
+
+def calculate_custom_range(data_list, dim):
+    """
+    Calculate the custom range for the axes based on the maximum values in the data list.
+    
+    Parameters:
+    - data_list: List of lists of data arrays.
+    - dim: Dimension of the data (2 or 3).
+    
+    Returns:
+    - custom_range: Dictionary with keys 'x', 'y', and optionally 'z' for custom ranges.
+    """
+    # Flatten the list of lists
+    all_data = np.array(data_list)
+    
+    custom_range = {
+        'x': [np.min(all_data[:, 0, :]), np.max(all_data[:, 0, :])],
+        'y': [np.min(all_data[:, 1, :]), np.max(all_data[:, 1, :])]
+    }
+    if dim == 3:
+        custom_range['z'] = [np.min(all_data[:, 2, :]), np.max(all_data[:, 2, :])]
+
+    print(custom_range)
+    return custom_range
+
+
+def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = []):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d =\
           result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
@@ -106,6 +132,14 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
 
     os.makedirs(pre_path + 'all_gifs/', exist_ok=True)
 
+
+    # Calculate custom ranges once for all frames
+    custom_range_2d = calculate_custom_range(list_pca_2d, dim=2)
+    custom_range_2d_random = calculate_custom_range(list_random_2d, dim=2)
+    custom_range_3d = calculate_custom_range(list_pca_3d, dim=3)
+    custom_range_3d_random = calculate_custom_range(list_random_3d, dim=3)
+
+
     # Create a list to store the axes for each frame
     for frame in range(num_frames):
         fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
@@ -119,17 +153,19 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
         animate_histogram(axs[0, 1], frame, eigens, title=subplot_title, x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
         animate_histogram(axs[0, 2], frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
 
-        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
-        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+        # plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+        # plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels)
         
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels)
+        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels)
         
-        fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
+        fig.savefig(pre_path + "all_gifs/{}_layer.pdf".format(str(frame)))
         plt.close(fig)
     
     # if num_frames % grid_size != 0:
@@ -140,7 +176,7 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
 
     # Create 8 figures, each containing all frames for one of the subplots
     for i in range(7):
-        fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(25 + grid_size[0], 15 + grid_size[1]))
+        fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(28 + grid_size[0], 15 + grid_size[1]))
         axs_ = axs.flatten()
         ax_3d = []
 
@@ -160,21 +196,21 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
             elif i == 2:
                 animate_histogram(fig_ax, frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
             elif i == 3:
-                plot_data_projection(fig_ax, frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, costume_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels, add_legend=False)
+                plot_data_projection(fig_ax, frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels, add_legend=False)
             elif i == 4:
-                plot_data_projection(fig_ax, frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, costume_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels, add_legend=False)
+                plot_data_projection(fig_ax, frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels, add_legend=False)
             elif i == 5:
                 axs_[frame].remove()
                 # fig.delaxes(axs[1])
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
-                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, costume_range=np.max(np.concatenate(list_pca_3d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels, add_legend=False, font_size=10)
+                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels, add_legend=False, font_size=10)
                 ax_3d.append(fig_ax)
             elif i == 6:
                 # axs_[frame].remove()
                 axs_[frame].remove()
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
                 # axs[frame] = fig_ax
-                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, costume_range=np.max(np.concatenate(list_random_3d).ravel().tolist()), labels_all=labels, add_legend=False, font_size=10)
+                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels, add_legend=False, font_size=10)
                 ax_3d.append(fig_ax)
 
             if len(layer_names) > 0:
@@ -182,6 +218,8 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
             else:
                 subplot_title = 'layers: '
                 fig_ax.set_title(f'layers: {frame}')
+            
+            # fig_ax.axis('off')
         # Hide any empty subplots
         for j in range(num_frames, len(axs)):
             axs[j].axis('off')
@@ -201,7 +239,7 @@ def plot_gifs(result_dict, this_path, num, costume_range=None, pre_path: str = '
         # for ax_col in axs.reshape(grid_size)[:, 0]:
         #     ax_col.set_ylabel('Y-axis')
 
-        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
+        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.pdf".format(i))
         plt.close(fig)
         
     _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
@@ -225,7 +263,7 @@ def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
 
 
     # Get list of image file paths in the directory
-    image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('layer.png')]
+    image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('layer.pdf')]
 
     # Sort the images based on the extracted layer index
     image_files_sorted = sorted(
@@ -244,51 +282,32 @@ def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
         loop=0
     )
 
-def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', costume_range=None, eigenvectors=None, labels_all: list = [], new=False, add_legend=True, font_size=16):
-    # print(counter)
+def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, title='layers: ', name_fig='', save_path='activation_animation.gif', bins=20, fps=1, pre_path='', custom_range=None, eigenvectors=None, labels_all: list = [], new=False, add_legend=True, font_size=16):
     ax.cla()
 
-    # if new:
+    # if custom_range is None:
+    #     custom_range = {'x': None, 'y': None, 'z': None}
 
-    #     projections = anim_pieces[counter]
-    #     labels = labels_all[0]
+    # # Default ranges
+    # default_range = {'x': [min(data[:, 0]), max(data[:, 0])],
+    #                  'y': [min(data[:, 1]), max(data[:, 1])]}
+    
+    # if data.shape[1] == 3:
+    #     default_range['z'] = [min(data[:, 2]), max(data[:, 2])]
 
-    #     # Ensure the number of data points matches the number of labels
-    #     assert projections.shape[0] == len(labels), f"Mismatch in data points and labels at layer {counter}"
+    # # Use default range if counter is zero
+    # if counter == 0:
+    #     custom_range = default_range
+    # else:
+    #     # Save the default range for future use
+    #     if 'default_range' not in plot_data_projection.__dict__:
+    #         plot_data_projection.default_range = default_range
 
-    #     # Convert labels to a NumPy array if it's a list
-    #     labels = np.array(labels)
+    #     # Use saved default range if custom range is not provided
+    #     custom_range = {axis: custom_range[axis] if custom_range[axis] is not None else plot_data_projection.default_range[axis]
+    #                     for axis in custom_range}
 
-    #     # Create a color map based on unique labels
-    #     unique_labels = np.unique(labels)
-    #     num_classes = len(unique_labels)
-    #     cmap = plt.get_cmap('tab10') if num_classes <= 10 else plt.get_cmap('tab20') # type: ignore
-
-    #     # Map labels to colors
-    #     colors = [cmap(label / num_classes) for label in labels]
-
-    #     if dim == 2:
-    #         ax.scatter(projections[:, 0], projections[:, 1], c=colors, s=10)
-    #         ax.set_xlabel('PC1')
-    #         ax.set_ylabel('PC2')
-    #     elif dim == 3:
-    #         ax.scatter(projections[:, 0], projections[:, 1], projections[:, 2], c=colors, s=10)
-    #         ax.set_xlabel('PC1')
-    #         ax.set_ylabel('PC2')
-    #         ax.set_zlabel('PC3')
-
-    #     ax.set_title(f'Layer {counter} PCA Projection')
-    #     ax.grid(True)
-
-    #     # Add legend
-    #     handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=cmap(label / num_classes), # type: ignore
-    #                         markersize=8, label=str(label)) for label in unique_labels]
-    #     ax.legend(handles=handles, title="Classes", loc="best")
-    #     return
-
-    # eigenvectors_2d = eigenvectors[0]
-    # ax.clear()
-
+    # Extract labels if provided
     if len(labels_all) == 0:
         labels = np.ones(len(anim_pieces[counter][0]))
     else:
@@ -315,8 +334,13 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     # Select appropriate scatter plot based on dimension
     if dim == 2:
         ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], c=colors, s=10)
+        ax.set_xlim(custom_range['x'][0], custom_range['x'][1])
+        ax.set_ylim(custom_range['y'][0], custom_range['y'][1])
     elif dim == 3:
         ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], anim_pieces[counter][2], c=colors, s=10)
+        ax.set_xlim(custom_range['x'][0], custom_range['x'][1])
+        ax.set_ylim(custom_range['y'][0], custom_range['y'][1])
+        ax.set_zlim(custom_range['z'][0], custom_range['z'][1])
     
     # If labels are provided, add a legend
     if labels is not None:
@@ -355,12 +379,7 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     else:
         ax.set_title(f'{title} {counter + 1}')
 
-    # del ax
-    # if costume_range:
-    #     ax.set_ylim(-1 * costume_range, costume_range)
-    #     ax.set_xlim(-1 * costume_range, costume_range)
-    #     if dim == 3:
-    #         ax.set_zlim(-1 * costume_range, costume_range)
+    return colors
 
 
 def plotting_actions(result_dict, num, this_path, arch, suffix=''):
@@ -431,7 +450,7 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     ax[3, 1].set_xlabel('layers')
     ax[3, 1].set_title('Cell Dimensions')
 
-    fig.savefig(this_path + suffix + 'all_plots.png')
+    fig.savefig(this_path + suffix + 'all_plots.pdf')
     plt.close(fig)
 
 def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batch, this_index=0, preds=None):
@@ -537,7 +556,7 @@ def create_gif_from_plots(plot_dir, output_gif, plot_type, start_epoch=10, end_e
 
     for epoch in range(start_epoch, end_epoch + 1, step):
         # Load both train and validation images for each epoch
-        img_path = os.path.join(plot_dir, f'epoch_{epoch}/_{plot_type}_all_plots.png')
+        img_path = os.path.join(plot_dir, f'epoch_{epoch}/_{plot_type}_all_plots.pdf')
 
         # Open the image (train or validation plot)
         img = Image.open(img_path)
@@ -620,9 +639,3 @@ def visualize_1D_boundaries(model, input_range=(-3, 3)):
     plt.ylabel('Output')
     plt.show()
 
-
-# def projection_plots(list_pca_2d, list_pca_3d, list_random_2d, list_random_3d, pre_path, costume_range=10):
-#     plot_data_projection(list_pca_2d, type_analysis='pca', dim=2, save_path='data_pca_2d.gif', pre_path=pre_path, costume_range=costume_range)
-#     plot_data_projection(list_pca_3d, type_analysis='pca', dim=3, save_path='data_pca_3d.gif', pre_path=pre_path, costume_range=costume_range)
-#     plot_data_projection(list_random_2d, type_analysis='random', dim=2, save_path='data_random_2d.gif', pre_path=pre_path, costume_range=costume_range)
-#     plot_data_projection(list_random_3d, type_analysis='random', dim=3, save_path='data_random_3d.gif', pre_path=pre_path, costume_range=costume_range)
