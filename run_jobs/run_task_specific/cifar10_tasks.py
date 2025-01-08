@@ -25,12 +25,16 @@ if __name__ == '__main__':
 
     training_mode = parser['training_mode']
 
-    saved_path = f'november_res/cifar10/{training_mode}/bias_{bias}'
+    saved_path = f'january_res/cifar10/{training_mode}/bias_{bias}'
     
     if parser['training_mode'] == 'normal':
         arch = (32*32*3, [1024, 784, 784, 512, 311, 311, 256, 256, 128, 128, 64, 64, 32, 32, 10, 10])
         cifar10_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
+    if parser['training_mode'] == 'constant_width':
+        arch = (32*32*3, [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 10])
+        cifar10_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
+
     if parser['training_mode'] == 'normal_three_class':
         arch = (32*32*3, [1024, 784, 784, 512, 311, 311, 256, 256, 128, 128, 64, 64, 32, 32, 10, 3])
         three_class_cifar10_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)

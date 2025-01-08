@@ -242,7 +242,7 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
         fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.pdf".format(i))
         plt.close(fig)
         
-    _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
+    # _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
 
 
 

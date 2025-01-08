@@ -24,13 +24,17 @@ if __name__ == '__main__':
 
     training_mode = parser['training_mode']
 
-    saved_path = f'november_res/mnist/{training_mode}/bias_{bias}'
+    saved_path = f'january_res/mnist/{training_mode}/bias_{bias}'
 
 
     if parser['training_mode'] == 'normal':
         arch = (784, [256, 128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])
         mnist_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
     
+    if parser['training_mode'] == 'constant_width':
+        arch = (784, [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 10])
+        mnist_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, bias=bias)
+
     if parser['training_mode'] == 'normal_three_class':
         arch = (784, [256, 128, 128, 128, 64, 64, 64, 64, 64, 32, 10, 3])
         mnist_training_analysis_hook_engine(try_num, archirecture=arch, pre_path=saved_path, epochs=500, three_class=True, bias=bias)
