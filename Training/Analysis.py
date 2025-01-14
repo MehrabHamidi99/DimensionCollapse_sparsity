@@ -108,7 +108,7 @@ def generate_heatmap_from_the_activation_list(layer_activations):
     return heatmap_data
 
 @torch.no_grad
-def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000, plotting=True, no_labels=False, default_select_list=(nn.ReLU,)):
+def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000, plotting=True, no_labels=False, default_select_list=(nn.ReLU,), no_custome_range=False):
 
     FIRST_BATCH = None
 
@@ -199,7 +199,7 @@ def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_
 
         plotting_actions(results_dict, num=samples.shape[0], this_path=save_path, arch=model_status)
 
-        plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'], layer_names=names)
+        plot_gifs(results_dict, this_path=save_path, num=samples.shape[0], pre_path=save_path, eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), labels=results_dict['labels'], layer_names=names, no_custome_range=no_custome_range)
     
     # Empty the GPU cache
     del relu_outputs, data_loader, feature_extractor

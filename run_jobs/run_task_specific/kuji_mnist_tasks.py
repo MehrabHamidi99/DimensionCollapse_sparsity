@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     training_mode = parser['training_mode']
 
-    saved_path = f'january_res/kuji_mnist/{training_mode}/bias_{bias}'
+    saved_path = f'january_res_png/kuji_mnist/{training_mode}/bias_{bias}'
 
     if parser['training_mode'] == 'normal':
         arch = (784, [256, 128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])

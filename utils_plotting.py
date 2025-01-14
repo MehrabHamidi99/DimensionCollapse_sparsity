@@ -115,7 +115,7 @@ def calculate_custom_range(data_list, dim):
     return custom_range
 
 
-def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = []):
+def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = [], no_custome_range=False):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d =\
           result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
@@ -139,6 +139,13 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
     custom_range_3d = calculate_custom_range(list_pca_3d, dim=3)
     custom_range_3d_random = calculate_custom_range(list_random_3d, dim=3)
 
+    if no_custome_range:
+        custom_range = None
+        custom_range_2d = None
+        custom_range_2d_random = None
+        custom_range_3d = None
+        custom_range_3d_random = None
+
 
     # Create a list to store the axes for each frame
     for frame in range(num_frames):
@@ -155,17 +162,18 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
 
         # plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
         # plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
-        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels)
-        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels)
+        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=None, eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=None, labels_all=labels)
         
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=None, eigenvectors=eigenvectors, labels_all=labels)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels)
+        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=None, labels_all=labels)
         
-        fig.savefig(pre_path + "all_gifs/{}_layer.pdf".format(str(frame)))
+        # fig.savefig(pre_path + "all_gifs/{}_layer.pdf".format(str(frame)))
+        fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
         plt.close(fig)
     
     # if num_frames % grid_size != 0:
@@ -239,7 +247,8 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
         # for ax_col in axs.reshape(grid_size)[:, 0]:
         #     ax_col.set_ylabel('Y-axis')
 
-        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.pdf".format(i))
+        # fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.pdf".format(i))
+        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
         plt.close(fig)
         
     # _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
@@ -263,7 +272,8 @@ def _create_gif_from_images(image_dir, output_gif_path, duration=1500):
 
 
     # Get list of image file paths in the directory
-    image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('layer.pdf')]
+    # image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('layer.pdf')]
+    image_files = [os.path.join(image_dir, img) for img in os.listdir(image_dir) if img.endswith('layer.png')]
 
     # Sort the images based on the extracted layer index
     image_files_sorted = sorted(
@@ -334,13 +344,15 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     # Select appropriate scatter plot based on dimension
     if dim == 2:
         ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], c=colors, s=10)
-        ax.set_xlim(custom_range['x'][0], custom_range['x'][1])
-        ax.set_ylim(custom_range['y'][0], custom_range['y'][1])
+        if custom_range:
+            ax.set_xlim(custom_range['x'][0], custom_range['x'][1])
+            ax.set_ylim(custom_range['y'][0], custom_range['y'][1])
     elif dim == 3:
         ax.scatter(anim_pieces[counter][0], anim_pieces[counter][1], anim_pieces[counter][2], c=colors, s=10)
-        ax.set_xlim(custom_range['x'][0], custom_range['x'][1])
-        ax.set_ylim(custom_range['y'][0], custom_range['y'][1])
-        ax.set_zlim(custom_range['z'][0], custom_range['z'][1])
+        if custom_range:
+            ax.set_xlim(custom_range['x'][0], custom_range['x'][1])
+            ax.set_ylim(custom_range['y'][0], custom_range['y'][1])
+            ax.set_zlim(custom_range['z'][0], custom_range['z'][1])
     
     # If labels are provided, add a legend
     if labels is not None:
@@ -450,7 +462,8 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     ax[3, 1].set_xlabel('layers')
     ax[3, 1].set_title('Cell Dimensions')
 
-    fig.savefig(this_path + suffix + 'all_plots.pdf')
+    # fig.savefig(this_path + suffix + 'all_plots.pdf')
+    fig.savefig(this_path + suffix + 'all_plots.png')
     plt.close(fig)
 
 def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batch, this_index=0, preds=None):
@@ -556,7 +569,8 @@ def create_gif_from_plots(plot_dir, output_gif, plot_type, start_epoch=10, end_e
 
     for epoch in range(start_epoch, end_epoch + 1, step):
         # Load both train and validation images for each epoch
-        img_path = os.path.join(plot_dir, f'epoch_{epoch}/_{plot_type}_all_plots.pdf')
+        # img_path = os.path.join(plot_dir, f'epoch_{epoch}/_{plot_type}_all_plots.pdf')
+        img_path = os.path.join(plot_dir, f'epoch_{epoch}/_{plot_type}_all_plots.png')
 
         # Open the image (train or validation plot)
         img = Image.open(img_path)

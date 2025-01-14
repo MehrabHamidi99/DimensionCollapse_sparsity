@@ -1,8 +1,8 @@
 from utils import *
-from DataGenerator import *
-from Models_normal import *
+from Data.DataGenerator import *
+from Models.Models_normal import *
 import torch.optim as optim
-from Analysis import fixed_model_batch_analysis
+from Training.Analysis import fixed_model_batch_analysis
 
 from sklearn.neighbors import KernelDensity
 from sklearn.mixture import GaussianMixture

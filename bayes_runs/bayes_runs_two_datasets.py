@@ -1,8 +1,11 @@
+
+import os, sys; sys.path.append(os.path.dirname(os.path.realpath(f'{__file__}/../.')))
+
 from utils import *
-from DataGenerator import *
-from Models_normal import *
+from Data.DataGenerator import *
+from Models.Models_normal import *
 import torch.optim as optim
-from Analysis import fixed_model_batch_analysis
+from Training.Analysis import fixed_model_batch_analysis
 
 from sklearn.neighbors import KernelDensity
 from sklearn.mixture import GaussianMixture
@@ -171,4 +174,4 @@ plt.grid()
 plt.savefig(save_path + 'mlp_predictions.png')
 
 
-fixed_model_batch_analysis(model=model , samples=X, labels=y, device=device, save_path=save_path, model_status='2, 16, 8, 1')
+fixed_model_batch_analysis(model=model , samples=X, labels=y, device=device, save_path=save_path, model_status='')

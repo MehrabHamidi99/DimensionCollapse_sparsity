@@ -12,6 +12,8 @@ from Models.ForwardPass import hook_forward_train
 from scipy.linalg import eigh
 
 def spike_detection_nd(points, max_hyperplanes=30, min_points_for_hyperplane=100, residual_threshold=0.5, merge_threshold=0.01):
+    # if not torch.is_tensor(points):
+    #     points = torch.Tensor(points)
     residual_threshold *= (points.shape[1] - 1)
     # merge_threshold *= (points.shape[1] - 1)
     def fit_hyperplane_ransac(points):

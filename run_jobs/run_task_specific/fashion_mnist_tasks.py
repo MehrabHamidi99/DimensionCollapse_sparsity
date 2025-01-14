@@ -23,7 +23,7 @@ if __name__ == '__main__':
     bias = float(parser['bias'])
 
     training_mode = parser['training_mode']
-    saved_path = f'january_res/fahsion_mnist/{training_mode}/bias_{bias}'
+    saved_path = f'january_res_png/fahsion_mnist/{training_mode}/bias_{bias}'
 
     if parser['training_mode'] == 'normal':
         # arch = (784, [128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10])

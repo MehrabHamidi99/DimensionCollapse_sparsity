@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     training_mode = parser['training_mode']
 
-    saved_path = f'january_res/mnist/{training_mode}/bias_{bias}'
+    saved_path = f'january_res_png/mnist/{training_mode}/bias_{bias}'
 
 
     if parser['training_mode'] == 'normal':

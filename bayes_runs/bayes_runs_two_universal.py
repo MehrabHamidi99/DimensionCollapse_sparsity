@@ -1,8 +1,10 @@
+import os, sys; sys.path.append(os.path.dirname(os.path.realpath(f'{__file__}/../.')))
+
 from utils import *
-from DataGenerator import *
-from Models_normal import *
+from Data.DataGenerator import *
+from Models.Models_normal import *
 import torch.optim as optim
-from Analysis import fixed_model_batch_analysis
+from Training.Analysis import fixed_model_batch_analysis
 
 from sklearn.neighbors import KernelDensity
 from sklearn.mixture import GaussianMixture
@@ -16,24 +18,26 @@ from bayes_runs_utils import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-layer_list = [3 for _ in range(16)] + [2]        # Hidden layers configuration  ---- good
+layer_list = [20 for _ in range(7)] + [2]        # Hidden layers configuration  ---- good
 # layer_list = [16, 16, 16, 8, 8, 8, 8, 8, 4, 2]        # Hidden layers configuration  ---- good1
 # layer_list = [16, 16, 16, 8, 8, 8, 8, 4, 2]        # Hidden layers configuration  ---- good2 removing layer 6!
+# layer_list = [16, 13, 7, 5, 3, 3, 2] + [2]
 
+data_mode = 'donuts_and_islands'
 
 # 4. Training loop
-num_epochs = 20000
+num_epochs = 1000
 
-try_num = 12 # Define try number here
+try_num = 10 # Define try number here
 
 save_path = 'ab_results/universal_test/'
 
-save_path = f'{save_path}try_{try_num}/'
+save_path = f'{save_path}try_{try_num}/{data_mode}/'
 if not os.path.isdir(save_path):
     os.makedirs(save_path)
 
 
-X, y = generate_data(mode='donut_and_line') # type: ignore
+X, y = generate_data(mode=data_mode) # type: ignore
 
 print(X.shape)
 print(y.shape)
@@ -105,4 +109,4 @@ plt.legend()
 plt.grid()
 plt.savefig(save_path + 'mlp_predictions.png')
 
-fixed_model_batch_analysis(model=model , samples=X, labels=y, device=device, save_path=save_path, model_status='2, 16, 8, 1')
+fixed_model_batch_analysis(model=model , samples=X, labels=y, device=device, save_path=save_path, model_status='2, 16, 8, 1', no_custome_range=True)
