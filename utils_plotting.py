@@ -90,7 +90,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
 
 
 
-def calculate_custom_range(data_list, dim):
+def calculate_custom_range(data_list, dim, index=None):
     """
     Calculate the custom range for the axes based on the maximum values in the data list.
     
@@ -101,6 +101,20 @@ def calculate_custom_range(data_list, dim):
     Returns:
     - custom_range: Dictionary with keys 'x', 'y', and optionally 'z' for custom ranges.
     """
+    if index:
+        # Flatten the list of lists
+        all_data = np.array(data_list)
+        
+        custom_range = {
+            'x': [np.min(all_data[index, 0, :]), np.max(all_data[index, 0, :])],
+            'y': [np.min(all_data[index, 1, :]), np.max(all_data[index, 1, :])]
+        }
+        if dim == 3:
+            custom_range['z'] = [np.min(all_data[index, 2, :]), np.max(all_data[index, 2, :])]
+
+        print(custom_range)
+        return custom_range
+
     # Flatten the list of lists
     all_data = np.array(data_list)
     
@@ -115,7 +129,7 @@ def calculate_custom_range(data_list, dim):
     return custom_range
 
 
-def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = [], no_custome_range=False):
+def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = [], no_custome_range='all'):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d =\
           result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
@@ -133,18 +147,29 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
     os.makedirs(pre_path + 'all_gifs/', exist_ok=True)
 
 
-    # Calculate custom ranges once for all frames
-    custom_range_2d = calculate_custom_range(list_pca_2d, dim=2)
-    custom_range_2d_random = calculate_custom_range(list_random_2d, dim=2)
-    custom_range_3d = calculate_custom_range(list_pca_3d, dim=3)
-    custom_range_3d_random = calculate_custom_range(list_random_3d, dim=3)
 
-    if no_custome_range:
+    print(no_custome_range)
+
+    if no_custome_range == 'all':
+        # Calculate custom ranges once for all frames
+        custom_range_2d = calculate_custom_range(list_pca_2d, dim=2)
+        custom_range_2d_random = calculate_custom_range(list_random_2d, dim=2)
+        custom_range_3d = calculate_custom_range(list_pca_3d, dim=3)
+        custom_range_3d_random = calculate_custom_range(list_random_3d, dim=3)
+    elif no_custome_range == 'input':
+        # Calculate custom ranges once for all frames
+        custom_range_2d = calculate_custom_range(list_pca_2d, dim=2, index=0)
+        custom_range_2d_random = calculate_custom_range(list_random_2d, dim=2, index=0)
+        custom_range_3d = calculate_custom_range(list_pca_3d, dim=3, index=0)
+        custom_range_3d_random = calculate_custom_range(list_random_3d, dim=3, index=0)
+        print("AFGENNGF")
+    else:
         custom_range = None
         custom_range_2d = None
         custom_range_2d_random = None
         custom_range_3d = None
         custom_range_3d_random = None
+
 
 
     # Create a list to store the axes for each frame
@@ -162,18 +187,18 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
 
         # plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
         # plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
-        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=None, eigenvectors=eigenvectors, labels_all=labels)
-        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=None, labels_all=labels)
+        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels)
         
         axs[1, 2].remove()
         axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=None, eigenvectors=eigenvectors, labels_all=labels)
+        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels)
         axs[1, 3].remove()
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=None, labels_all=labels)
+        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels)
         
-        # fig.savefig(pre_path + "all_gifs/{}_layer.pdf".format(str(frame)))
-        fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
+        fig.savefig(pre_path + "all_gifs/{}_layer.pdf".format(str(frame)))
+        # fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
         plt.close(fig)
     
     # if num_frames % grid_size != 0:
@@ -247,8 +272,8 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
         # for ax_col in axs.reshape(grid_size)[:, 0]:
         #     ax_col.set_ylabel('Y-axis')
 
-        # fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.pdf".format(i))
-        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
+        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.pdf".format(i))
+        # fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
         plt.close(fig)
         
     # _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')
@@ -462,8 +487,7 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     ax[3, 1].set_xlabel('layers')
     ax[3, 1].set_title('Cell Dimensions')
 
-    # fig.savefig(this_path + suffix + 'all_plots.pdf')
-    fig.savefig(this_path + suffix + 'all_plots.png')
+    fig.savefig(this_path + suffix + 'all_plots.pdf')
     plt.close(fig)
 
 def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batch, this_index=0, preds=None):
