@@ -67,34 +67,34 @@ if __name__ == '__main__':
         'exp_type': exp_type
     }
 
-    pp = f'/network/scratch/m/mehrab.hamidi/november_res/random_experiment/{mode}'
+    pp = f'/network/scratch/m/mehrab.hamidi/januery_res25_scale_fixed_batch_norm/random_experiment/{mode}'
 
     if mode == 'custome':
         archs = [
-            (2, [10 for _ in range(5)]),
+            # (2, [10 for _ in range(5)]),
             (2, [10 for _ in range(23)]),
-            (2, [10 for _ in range(63)]),
+            # (2, [10 for _ in range(63)]),
             
-            (2, [30 for _ in range(5)]),
+            # (2, [30 for _ in range(5)]),
             (2, [30 for _ in range(23)]),
             (2, [30 for _ in range(63)]),
             
-            (2, [100 for _ in range(5)]),
+            # (2, [100 for _ in range(5)]),
             (2, [100 for _ in range(23)]),
-            (2, [100 for _ in range(63)]),
+            # (2, [100 for _ in range(63)]),
 
 
-            (10, [10 for _ in range(5)]),
+            # (10, [10 for _ in range(5)]),
             (10, [10 for _ in range(23)]),
-            (10, [10 for _ in range(63)]),
+            # (10, [10 for _ in range(63)]),
             
-            (30, [30 for _ in range(5)]),
+            # (30, [30 for _ in range(5)]),
             (30, [30 for _ in range(23)]),
             (30, [30 for _ in range(63)]),
             
-            (100, [100 for _ in range(5)]),
+            # (100, [100 for _ in range(5)]),
             (100, [100 for _ in range(23)]),
-            (100, [100 for _ in range(63)]),
+            # (100, [100 for _ in range(63)]),
 
 
             (100, [100 for _ in range(111)]),

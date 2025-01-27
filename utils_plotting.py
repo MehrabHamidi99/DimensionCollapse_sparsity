@@ -90,7 +90,7 @@ def animate_histogram(ax, counter, activation_data, title, name_fig='', x_axis_t
 
 
 
-def calculate_custom_range(data_list, dim, index=None):
+def calculate_custom_range(data_list, dim, index=None, fixed=True):
     """
     Calculate the custom range for the axes based on the maximum values in the data list.
     
@@ -101,6 +101,7 @@ def calculate_custom_range(data_list, dim, index=None):
     Returns:
     - custom_range: Dictionary with keys 'x', 'y', and optionally 'z' for custom ranges.
     """
+
     if index:
         # Flatten the list of lists
         all_data = np.array(data_list)
@@ -113,6 +114,18 @@ def calculate_custom_range(data_list, dim, index=None):
             custom_range['z'] = [np.min(all_data[index, 2, :]), np.max(all_data[index, 2, :])]
 
         print(custom_range)
+
+        if fixed:
+            custom_range['x'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+            custom_range['y'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+
+            custom_range['x'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+            custom_range['y'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+
+            if dim == 3:
+                custom_range['z'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+            custom_range['z'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+
         return custom_range
 
     # Flatten the list of lists
@@ -122,8 +135,20 @@ def calculate_custom_range(data_list, dim, index=None):
         'x': [np.min(all_data[:, 0, :]), np.max(all_data[:, 0, :])],
         'y': [np.min(all_data[:, 1, :]), np.max(all_data[:, 1, :])]
     }
+
     if dim == 3:
         custom_range['z'] = [np.min(all_data[:, 2, :]), np.max(all_data[:, 2, :])]
+    
+    if fixed:
+        custom_range['x'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+        custom_range['y'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+
+        custom_range['x'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+        custom_range['y'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+
+        if dim == 3:
+            custom_range['z'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+        custom_range['z'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
 
     print(custom_range)
     return custom_range
@@ -145,10 +170,8 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
     grid_size = (num_frames // largest_divisor, largest_divisor)
 
     os.makedirs(pre_path + 'all_gifs/', exist_ok=True)
+    os.makedirs(pre_path + 'all_gifs_pdf/', exist_ok=True)
 
-
-
-    print(no_custome_range)
 
     if no_custome_range == 'all':
         # Calculate custom ranges once for all frames
@@ -162,7 +185,6 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
         custom_range_2d_random = calculate_custom_range(list_random_2d, dim=2, index=0)
         custom_range_3d = calculate_custom_range(list_pca_3d, dim=3, index=0)
         custom_range_3d_random = calculate_custom_range(list_random_3d, dim=3, index=0)
-        print("AFGENNGF")
     else:
         custom_range = None
         custom_range_2d = None
@@ -197,8 +219,8 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
         axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
         plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels)
         
-        fig.savefig(pre_path + "all_gifs/{}_layer.pdf".format(str(frame)))
-        # fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
+        fig.savefig(pre_path + "all_gifs_pdf/{}_layer.pdf".format(str(frame)))
+        fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
         plt.close(fig)
     
     # if num_frames % grid_size != 0:
@@ -272,8 +294,8 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
         # for ax_col in axs.reshape(grid_size)[:, 0]:
         #     ax_col.set_ylabel('Y-axis')
 
-        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.pdf".format(i))
-        # fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
+        fig.savefig(pre_path + "all_gifs_pdf/all_frames_subplot_{}.pdf".format(i))
+        fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
         plt.close(fig)
         
     # _create_gif_from_images(pre_path + 'all_gifs/', pre_path + 'all_gifs.gif')

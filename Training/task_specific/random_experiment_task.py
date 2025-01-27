@@ -59,4 +59,4 @@ def random_experiment_hook_engine(architecture, exps=50, num=1000, pre_path='', 
 
     plotting_actions(results_dict, num, this_path, architecture[1])
 
-    plot_gifs(results_dict, this_path, costume_range=max(np.abs(data_properties['scale'] * 2), 10, int(np.abs(data_properties['loc'] / 2))), pre_path=this_path, scale=data_properties['scale'], eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), num=num)
+    plot_gifs(results_dict, this_path, custom_range=max(np.abs(data_properties['scale'] * 2), 10, int(np.abs(data_properties['loc'] / 2))), pre_path=this_path, scale=data_properties['scale'], eigenvectors=np.array(results_dict['eigenvectors'], dtype=object), num=num)
