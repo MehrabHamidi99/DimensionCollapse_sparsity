@@ -108,7 +108,7 @@ def generate_heatmap_from_the_activation_list(layer_activations):
     return heatmap_data
 
 @torch.no_grad
-def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000, plotting=True, no_labels=False, default_select_list=(nn.ReLU,), no_custome_range='all'):
+def fixed_model_batch_analysis(model, samples, labels, device, save_path, model_status, batch_size=10000, plotting=True, no_labels=False, default_select_list=(nn.ReLU,), no_custome_range='input'):
 
     FIRST_BATCH = None
 

@@ -102,7 +102,7 @@ def calculate_custom_range(data_list, dim, index=None, fixed=True):
     - custom_range: Dictionary with keys 'x', 'y', and optionally 'z' for custom ranges.
     """
 
-    if index:
+    if index is not None:
         # Flatten the list of lists
         all_data = np.array(data_list)
         
@@ -113,18 +113,22 @@ def calculate_custom_range(data_list, dim, index=None, fixed=True):
         if dim == 3:
             custom_range['z'] = [np.min(all_data[index, 2, :]), np.max(all_data[index, 2, :])]
 
-        print(custom_range)
-
         if fixed:
-            custom_range['x'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
-            custom_range['y'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
-
-            custom_range['x'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
-            custom_range['y'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
-
             if dim == 3:
-                custom_range['z'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
-            custom_range['z'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+                custom_range['x'][0] = min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+                custom_range['y'][0] = min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+
+                custom_range['x'][1] = max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+                custom_range['y'][1] = max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+
+                custom_range['z'][0] = min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+                custom_range['z'][1] = max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+            else:
+                custom_range['x'][0] = min(custom_range['x'][0], custom_range['y'][0])
+                custom_range['y'][0] = min(custom_range['x'][0], custom_range['y'][0])
+
+                custom_range['x'][1] = max(custom_range['x'][1], custom_range['y'][1])
+                custom_range['y'][1] = max(custom_range['x'][1], custom_range['y'][1])
 
         return custom_range
 
@@ -140,21 +144,27 @@ def calculate_custom_range(data_list, dim, index=None, fixed=True):
         custom_range['z'] = [np.min(all_data[:, 2, :]), np.max(all_data[:, 2, :])]
     
     if fixed:
-        custom_range['x'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
-        custom_range['y'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
-
-        custom_range['x'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
-        custom_range['y'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
-
         if dim == 3:
-            custom_range['z'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
-        custom_range['z'][1] = np.max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+            custom_range['x'][0] = min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+            custom_range['y'][0] = np.min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+
+            custom_range['x'][1] = max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+            custom_range['y'][1] = max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+
+            custom_range['z'][0] = min(custom_range['x'][0], custom_range['y'][0], custom_range['z'][0])
+            custom_range['z'][1] = max(custom_range['x'][1], custom_range['y'][1], custom_range['z'][1])
+        else:
+            custom_range['x'][0] = min(custom_range['x'][0], custom_range['y'][0])
+            custom_range['y'][0] = min(custom_range['x'][0], custom_range['y'][0])
+
+            custom_range['x'][1] = max(custom_range['x'][1], custom_range['y'][1])
+            custom_range['y'][1] = max(custom_range['x'][1], custom_range['y'][1])
 
     print(custom_range)
     return custom_range
 
 
-def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = [], no_custome_range='all'):
+def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = '', scale=None, eigenvectors=None, labels: list = [], layer_names: list = [], no_custome_range='input'):
 
     layer_activation_ratio, eigens, dist_all, list_pca_2d, list_pca_3d, list_random_2d, list_random_3d =\
           result_dict['activations'], result_dict['eigenvalues'], result_dict['norms'], result_dict['pca_2'], result_dict['pca_3'], result_dict['random_2'], result_dict['random_3']
@@ -194,48 +204,55 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
 
 
 
-    # Create a list to store the axes for each frame
-    for frame in range(num_frames):
-        fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
+    # # Create a list to store the axes for each frame
+    
+    # for frame in range(num_frames):
+    #     fig, axs = plt.subplots(2, 4, figsize=(22, 22))  # Adjust subplot layout as needed
 
-        if len(layer_names) > 0:
-            subplot_title = layer_names
-        else:
-            subplot_title = 'layers: '
+    #     if len(layer_names) > 0:
+    #         subplot_title = layer_names
+    #     else:
+    #         subplot_title = 'layers: '
         
-        animate_histogram(axs[0, 0], min(frame, len(layer_activation_ratio) - 1), layer_activation_ratio, title=subplot_title, zero_one=True, num=num)
-        animate_histogram(axs[0, 1], frame, eigens, title=subplot_title, x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
-        animate_histogram(axs[0, 2], frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
+    #     animate_histogram(axs[0, 0], min(frame, len(layer_activation_ratio) - 1), layer_activation_ratio, title=subplot_title, zero_one=True, num=num)
+    #     animate_histogram(axs[0, 1], frame, eigens, title=subplot_title, x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)  
+    #     animate_histogram(axs[0, 2], frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
 
-        # plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
-        # plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
-        plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels)
-        plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels)
+    #     # plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=np.max(np.concatenate(list_pca_2d).ravel().tolist()), eigenvectors=eigenvectors, labels_all=labels)
+    #     # plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=np.max(np.concatenate(list_random_2d).ravel().tolist()), labels_all=labels)
+    #     plot_data_projection(axs[1, 0], frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels)
+    #     plot_data_projection(axs[1, 1], frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels)
         
-        axs[1, 2].remove()
-        axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
-        plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels)
-        axs[1, 3].remove()
-        axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
-        plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels)
+    #     axs[1, 2].remove()
+    #     axs[1, 2] = fig.add_subplot(2, 4, 7, projection='3d')
+    #     plot_data_projection(axs[1, 2], frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels)
+    #     axs[1, 3].remove()
+    #     axs[1, 3] = fig.add_subplot(2, 4, 8, projection='3d')
+    #     plot_data_projection(axs[1, 3], frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels)
         
-        fig.savefig(pre_path + "all_gifs_pdf/{}_layer.pdf".format(str(frame)))
-        fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
-        plt.close(fig)
+    #     fig.savefig(pre_path + "all_gifs_pdf/{}_layer.pdf".format(str(frame)))
+    #     fig.savefig(pre_path + "all_gifs/{}_layer.png".format(str(frame)))
+    #     plt.close(fig)
     
     # if num_frames % grid_size != 0:
     #     if num_frames > 10:
     #         raise Exception("Can't create grid")
     #     else:
     #         grid_size = num_frames
-
+    grid_size = [1, 5]
     # Create 8 figures, each containing all frames for one of the subplots
     for i in range(7):
-        fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(28 + grid_size[0], 15 + grid_size[1]))
+        fig, axs = plt.subplots(grid_size[0], grid_size[1], figsize=(45, 10))
         axs_ = axs.flatten()
         ax_3d = []
 
-        for frame in range(num_frames):
+        if len(list_pca_2d) < 35:
+            num_frames = [0, 2, 4, 8, 10]
+        else:
+            num_frames = [0, 15, 30, 45, 60]
+
+        # for frame in range(num_frames):
+        for frame in range(len(num_frames)):
             fig_ax = axs_[frame]
 
             if len(layer_names) > 0:
@@ -247,36 +264,37 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
             if i == 0:
                 animate_histogram(fig_ax, min(frame, len(layer_activation_ratio) - 1), layer_activation_ratio, title=subplot_title, zero_one=True, num=num)
             elif i == 1:
-                animate_histogram(fig_ax, frame, eigens, title=subplot_title, x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)
+                animate_histogram(fig_ax, num_frames[frame], eigens, title=subplot_title, x_axis_title='eigenvalues distribution', fixed_scale=False, custom_range=1, zero_one=False, eigens=True)
             elif i == 2:
-                animate_histogram(fig_ax, frame, dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
+                animate_histogram(fig_ax, num_frames[frame], dist_all, title=subplot_title, x_axis_title='distance from origin distribution / max', fixed_scale=True, custom_range=1, step=False, zero_one=False, norms=True)
             elif i == 3:
-                plot_data_projection(fig_ax, frame, list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels, add_legend=False)
+                plot_data_projection(fig_ax, num_frames[frame], list_pca_2d, title=subplot_title, type_analysis='pca', dim=2, custom_range=custom_range_2d, eigenvectors=eigenvectors, labels_all=labels, add_legend=False, font_size=40)
             elif i == 4:
-                plot_data_projection(fig_ax, frame, list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels, add_legend=False)
+                plot_data_projection(fig_ax, num_frames[frame], list_random_2d, title=subplot_title, type_analysis='random', dim=2, custom_range=custom_range_2d_random, labels_all=labels, add_legend=False, font_size=40)
             elif i == 5:
                 axs_[frame].remove()
                 # fig.delaxes(axs[1])
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
-                plot_data_projection(fig_ax, frame, list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels, add_legend=False, font_size=10)
+                plot_data_projection(fig_ax, num_frames[frame], list_pca_3d, title=subplot_title, type_analysis='pca', dim=3, custom_range=custom_range_3d, eigenvectors=eigenvectors, labels_all=labels, add_legend=False, font_size=30)
                 ax_3d.append(fig_ax)
             elif i == 6:
                 # axs_[frame].remove()
                 axs_[frame].remove()
                 fig_ax = fig.add_subplot(grid_size[0], grid_size[1], frame + 1, projection='3d')
                 # axs[frame] = fig_ax
-                plot_data_projection(fig_ax, frame, list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels, add_legend=False, font_size=10)
+                plot_data_projection(fig_ax, num_frames[frame], list_random_3d, title=subplot_title, type_analysis='random', dim=3, custom_range=custom_range_3d_random, labels_all=labels, add_legend=False, font_size=30)
                 ax_3d.append(fig_ax)
 
             if len(layer_names) > 0:
-                fig_ax.set_title(layer_names[frame])
+                fig_ax.set_title(layer_names[num_frames[frame]])
+                fig_ax.set_title(f'layer: {num_frames[frame]}', fontsize=36)
             else:
                 subplot_title = 'layers: '
-                fig_ax.set_title(f'layers: {frame}')
+                fig_ax.set_title(f'layers: {num_frames[frame]}', fontsize=36)
             
             # fig_ax.axis('off')
         # Hide any empty subplots
-        for j in range(num_frames, len(axs)):
+        for j in range(len(num_frames), len(axs)):
             axs[j].axis('off')
 
         # Set axis labels only for the bottom row and left column, remove for others
@@ -295,6 +313,8 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
         #     ax_col.set_ylabel('Y-axis')
 
         fig.savefig(pre_path + "all_gifs_pdf/all_frames_subplot_{}.pdf".format(i))
+        # plt.close(fig)
+
         fig.savefig(pre_path + "all_gifs/all_frames_subplot_{}.png".format(i))
         plt.close(fig)
         
@@ -415,28 +435,28 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
     ax.grid(True)
 
     if type_analysis == 'pca':
-        ax.set_xlabel('First Principal Component', fontsize=font_size)
-        ax.set_ylabel('Second Principal Component', fontsize=font_size)
+        ax.set_xlabel('PC1', fontsize=font_size)
+        ax.set_ylabel('PC2', fontsize=font_size)
         if dim == 2:
             # ax.quiver([0, 0], eigenvectors[0][:, -1][0], eigenvectors[0][:, -1][1])
             # ax.quiver([0, 0], eigenvectors[0][:, -2][0], eigenvectors[0][:, -2][1])
             ax.set_title('Data in First Two Principal Components')
         if dim == 3:
-            ax.set_zlabel('Third Principal Component', fontsize=font_size)
+            ax.set_zlabel('PC3', fontsize=font_size)
             ax.set_title('Data in First Three Principal Components')
     elif type_analysis == 'random':
-        ax.set_xlabel('First Random Diemnsion', fontsize=font_size)
-        ax.set_ylabel('Second Random Dimension', fontsize=font_size)
+        ax.set_xlabel('RD 1', fontsize=font_size)
+        ax.set_ylabel('RD 2', fontsize=font_size)
         ax.set_title('Data in Two Random Dimension')
         if dim == 2:
             ax.set_title('Data in Two Random Dimension')
         if dim == 3:
-            ax.set_zlabel('Third Random Dimension', fontsize=font_size)
+            ax.set_zlabel('RD 3', fontsize=font_size)
             ax.set_title('Data in Three Random Dimension')
     if type(title) is list:
-        ax.set_title(title[counter])
+        ax.set_title(title[counter], fontsize=60)
     else:
-        ax.set_title(f'{title} {counter + 1}')
+        ax.set_title(f'{title} {counter + 1}', fontsize=60)
 
     return colors
 
@@ -446,71 +466,170 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
     activations, stable_ranks_all, simple_spherical_mean_width_all, spherical_mean_width_v2_all, eigen_count, distances, display_neuron_matrx, cell_dims = result_dict['activations'], result_dict['stable_rank'], result_dict['simple_spherical_mean_width'], result_dict['spherical_mean_width_v2'], result_dict['nonzero_eigenvalues_count'], result_dict['norms'], result_dict['display_matrix'], result_dict['batch_cell_dimensions']
 
     act_count = np.array(list(itertools.chain.from_iterable(list(activations))))
-    fig, ax = plt.subplots(4, 2, figsize=(20, 20))
-    if isinstance(arch, str):
-        fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
-    else:
-        fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+
+    fig, ax = plt.subplots(1, 2, figsize=(20, 10))
+    # if isinstance(arch, str):
+    #     fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    # else:
+    #     fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
 
 
-    # Activation plot
-    tp = ax[0, 0].hist(act_count / num, bins=100)
-    ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
-    ax[0, 0].set_ylabel('neuron frequency')
-    ax[0, 0].set_title('Single Neuron Activations')
-    # fig.savefig(this_path + suffix + 'additive_activations.png')
-    # plt.xlim(0, 1)
-    # plt.close(fig)
+#     # Activation plot
+#     tp = ax[0, 0].hist(act_count / num, bins=100)
+#     ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
+#     ax[0, 0].set_ylabel('neuron frequency')
+#     ax[0, 0].set_title('Single Neuron Activations')
+#     # fig.savefig(this_path + suffix + 'additive_activations.png')
+#     # plt.xlim(0, 1)
+#     # plt.close(fig)
 
-    # Eigenvalue plots:
+#     # Eigenvalue plots:
+#     # fig, ax = plt.subplots(figsize=(7, 7))
+#     tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
+#     ax[0, 1].set_ylabel('number of non-zero eigenvalues')
+#     ax[0, 1].set_xlabel('layers')
+#     ax[0, 1].set_title('Non-zero eigenvalues')
+#     # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.png')
+#     # plt.close(fig)
+
+
+# # def plot_distances(net, distances, this_path, suffix=''):
     # fig, ax = plt.subplots(figsize=(7, 7))
-    tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
-    ax[0, 1].set_ylabel('number of non-zero eigenvalues')
-    ax[0, 1].set_xlabel('layers')
-    ax[0, 1].set_title('Non-zero eigenvalues')
-    # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.png')
-    # plt.close(fig)
+    # X_axis = np.arange(len(distances))
+    # dis_stat = np.array(distances)
+
+    # ax[0, 0].bar(X_axis - 0.2, np.mean(distances, axis=1), 0.2, label = 'Mean')
+    # # ax[1, 0].bar(X_axis + 0.0, np.var(distances, axis=1), 0.2, label = 'Var')
+    # ax[0, 0].bar(X_axis + 0.0, np.max(distances, axis=1), 0.2, label = 'Max')
+    # # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
+    # ax[0, 0].set_ylabel('mean distances from origin')
+    # ax[0, 0].set_xlabel('layers')
+    # ax[0, 0].set_title('Max, Mean Norms throughout layers')
+    # ax[0, 0].legend()
+
+    stable_ranks_all = stable_ranks_all[1:-1]
 
 
-# def plot_distances(net, distances, this_path, suffix=''):
-    # fig, ax = plt.subplots(figsize=(7, 7))
-    X_axis = np.arange(len(distances))
-    dis_stat = np.array(distances)
+    tp = ax[0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
+    ax[0].set_ylabel('Stable Rank', fontsize=30)
+    ax[0].set_xlabel('layers', fontsize=30)
+    ax[0].set_title('Stable Rank throughout layers' , fontsize=30)
 
-    ax[1, 0].bar(X_axis - 0.2, np.mean(distances, axis=1), 0.2, label = 'Mean')
-    # ax[1, 0].bar(X_axis + 0.0, np.var(distances, axis=1), 0.2, label = 'Var')
-    ax[1, 0].bar(X_axis + 0.0, np.max(distances, axis=1), 0.2, label = 'Max')
-    # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
-    ax[1, 0].set_ylabel('mean distances from origin')
-    ax[1, 0].set_xlabel('layers')
-    ax[1, 0].set_title('Max/Mean Norms throughout layers')
-    ax[1, 0].legend()
-    
-    sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax[1, 1], vmin=0, vmax=num)
-    ax[1, 1].set_title('Neuron activation heatmap')
+    simple_spherical_mean_width_all = simple_spherical_mean_width_all[1: -1]
 
-    tp = ax[2, 0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
-    ax[2, 0].set_ylabel('Stable Rank')
-    ax[2, 0].set_xlabel('layers')
-    ax[2, 0].set_title('Stable Rank throughout layers')
+    tp = ax[1].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
+    ax[1].set_ylabel('Mean Singular Values', fontsize=30)
+    ax[1].set_xlabel('layers', fontsize=30)
+    ax[1].set_title('Mean singular values', fontsize=30)
 
-    tp = ax[2, 1].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
-    ax[2, 1].set_ylabel('Spherical Mean Width')
-    ax[2, 1].set_xlabel('layers')
-    ax[2, 1].set_title('2 * Mean singular values')
+    # tp = ax[1, 1].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
+    # ax[1, 1].set_ylabel('Spherical Mean Width', fontsize=25)
+    # ax[1, 1].set_xlabel('layers', fontsize=25)
+    # ax[1, 1].set_title('Spherical Mean Width', fontsize=30)
 
-    tp = ax[3, 0].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
-    ax[3, 0].set_ylabel('Spherical Mean Width - v2')
-    ax[3, 0].set_xlabel('layers')
-    ax[3, 0].set_title('Spherical Mean Width')
+#     tp = ax[3, 1].bar(np.arange(len(cell_dims)), cell_dims)
+#     ax[3, 1].set_ylabel('dimensions')
+#     ax[3, 1].set_xlabel('layers')
+#     ax[3, 1].set_title('Cell Dimensions')
 
-    tp = ax[3, 1].bar(np.arange(len(cell_dims)), cell_dims)
-    ax[3, 1].set_ylabel('dimensions')
-    ax[3, 1].set_xlabel('layers')
-    ax[3, 1].set_title('Cell Dimensions')
-
-    fig.savefig(this_path + suffix + 'all_plots.pdf')
+    fig.savefig(this_path + suffix + 'all_plots_dimensions.pdf')
     plt.close(fig)
+
+    fig, ax = plt.subplots(1, 1, figsize=(20, 20))
+    # if isinstance(arch, str):
+    #     fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+    # else:
+    #     fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+
+    display_neuron_matrx[display_neuron_matrx > 0] = (np.array(display_neuron_matrx[display_neuron_matrx > 0]) / np.max(display_neuron_matrx[display_neuron_matrx > 0]) ) * 100
+    
+    sns.set(font_scale=3)
+    sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax, vmin=0, vmax=100)
+    ax.set_title('Neuron activation heatmap')
+
+    # Remove tick labels
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+
+    # Set axis labels
+    ax.set_xlabel('Layer', fontsize=30)
+    ax.set_ylabel('Neuron', fontsize=30)
+    
+    fig.savefig(this_path + suffix + 'all_plots_heatmap.pdf')
+    plt.close(fig)
+
+    sns.reset_orig()
+
+
+############################################################################################################################################################################
+#     fig, ax = plt.subplots(4, 2, figsize=(20, 20))
+#     if isinstance(arch, str):
+#         fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+#     else:
+#         fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+
+
+#     # Activation plot
+#     tp = ax[0, 0].hist(act_count / num, bins=100)
+#     ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
+#     ax[0, 0].set_ylabel('neuron frequency')
+#     ax[0, 0].set_title('Single Neuron Activations')
+#     # fig.savefig(this_path + suffix + 'additive_activations.png')
+#     # plt.xlim(0, 1)
+#     # plt.close(fig)
+
+#     # Eigenvalue plots:
+#     # fig, ax = plt.subplots(figsize=(7, 7))
+#     tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
+#     ax[0, 1].set_ylabel('number of non-zero eigenvalues')
+#     ax[0, 1].set_xlabel('layers')
+#     ax[0, 1].set_title('Non-zero eigenvalues')
+#     # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.png')
+#     # plt.close(fig)
+
+
+# # def plot_distances(net, distances, this_path, suffix=''):
+#     # fig, ax = plt.subplots(figsize=(7, 7))
+#     X_axis = np.arange(len(distances))
+#     dis_stat = np.array(distances)
+
+#     ax[1, 0].bar(X_axis - 0.2, np.mean(distances, axis=1), 0.2, label = 'Mean')
+#     # ax[1, 0].bar(X_axis + 0.0, np.var(distances, axis=1), 0.2, label = 'Var')
+#     ax[1, 0].bar(X_axis + 0.0, np.max(distances, axis=1), 0.2, label = 'Max')
+#     # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
+#     ax[1, 0].set_ylabel('mean distances from origin')
+#     ax[1, 0].set_xlabel('layers')
+#     ax[1, 0].set_title('Max, Mean Norms throughout layers')
+#     ax[1, 0].legend()
+
+#     display_neuron_matrx = (np.array(display_neuron_matrx) / np.max(display_neuron_matrx) ) * 100
+#     print(display_neuron_matrx)
+    
+#     sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax[1, 1], vmin=0, vmax=100)
+#     ax[1, 1].set_title('Neuron activation heatmap')
+
+#     tp = ax[2, 0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
+#     ax[2, 0].set_ylabel('Stable Rank')
+#     ax[2, 0].set_xlabel('layers')
+#     ax[2, 0].set_title('Stable Rank throughout layers')
+
+#     tp = ax[2, 1].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
+#     ax[2, 1].set_ylabel('Spherical Mean Width')
+#     ax[2, 1].set_xlabel('layers')
+#     ax[2, 1].set_title('2 * Mean singular values')
+
+#     tp = ax[3, 0].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
+#     ax[3, 0].set_ylabel('Spherical Mean Width - v2')
+#     ax[3, 0].set_xlabel('layers')
+#     ax[3, 0].set_title('Spherical Mean Width')
+
+#     tp = ax[3, 1].bar(np.arange(len(cell_dims)), cell_dims)
+#     ax[3, 1].set_ylabel('dimensions')
+#     ax[3, 1].set_xlabel('layers')
+#     ax[3, 1].set_title('Cell Dimensions')
+
+#     fig.savefig(this_path + suffix + 'all_plots.pdf')
+#     plt.close(fig)
 
 def batch_projectional_analysis(covariance_matrix, data, result_dict, first_batch, this_index=0, preds=None):
 

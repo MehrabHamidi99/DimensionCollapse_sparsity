@@ -9,3 +9,5 @@ main_env/
 debug_res/
 */__pycache__/*
 */__pycache__
+test/*.pdf
+test/*.png
