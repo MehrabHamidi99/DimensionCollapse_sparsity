@@ -67,7 +67,7 @@ if __name__ == '__main__':
         'exp_type': exp_type
     }
 
-    pp = f'/network/scratch/m/mehrab.hamidi/januery_res25_scale_fixed_mnist_arch_newnew_looloo/random_experiment/{mode}'
+    pp = f'/network/scratch/m/mehrab.hamidi/januery_res25_scale_fixed_mnist_arch_00000/random_experiment/{mode}'
 
     if mode == 'custome':
         archs = [
@@ -91,7 +91,7 @@ if __name__ == '__main__':
             # (30, [30 for _ in range(5)]),
             # (784, [30 for _ in range(23)]),
             # (784, [30 for _ in range(62)] + [10]),
-            (784, [100 for _ in range(62)] + [10]),
+            # (784, [100 for _ in range(62)] + [10]),
             # (784, [256, 128, 128, 128, 64, 64, 64, 64, 64, 64, 32, 10]),
             
             # (100, [100 for _ in range(5)]),
@@ -99,7 +99,7 @@ if __name__ == '__main__':
             # (100, [100 for _ in range(63)]),
 
 
-            # (100, [100 for _ in range(111)]),
+            (100, [100 for _ in range(111)]),
 
         ]
     elif mode == 'depth':

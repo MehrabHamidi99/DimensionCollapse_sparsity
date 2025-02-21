@@ -287,10 +287,10 @@ def plot_gifs(result_dict, this_path, num, custom_range=None, pre_path: str = ''
 
             if len(layer_names) > 0:
                 fig_ax.set_title(layer_names[num_frames[frame]])
-                fig_ax.set_title(f'layer: {num_frames[frame]}', fontsize=36)
+                fig_ax.set_title(f'layer: {num_frames[frame]}', fontsize=60)
             else:
                 subplot_title = 'layers: '
-                fig_ax.set_title(f'layers: {num_frames[frame]}', fontsize=36)
+                fig_ax.set_title(f'layers: {num_frames[frame]}', fontsize=60)
             
             # fig_ax.axis('off')
         # Hide any empty subplots
@@ -454,9 +454,9 @@ def plot_data_projection(ax, counter, anim_pieces, type_analysis='pca', dim=2, t
             ax.set_zlabel('RD 3', fontsize=font_size)
             ax.set_title('Data in Three Random Dimension')
     if type(title) is list:
-        ax.set_title(title[counter], fontsize=60)
+        ax.set_title(title[counter], fontsize=70)
     else:
-        ax.set_title(f'{title} {counter + 1}', fontsize=60)
+        ax.set_title(f'{title} {counter + 1}', fontsize=70)
 
     return colors
 
@@ -467,100 +467,181 @@ def plotting_actions(result_dict, num, this_path, arch, suffix=''):
 
     act_count = np.array(list(itertools.chain.from_iterable(list(activations))))
 
-    fig, ax = plt.subplots(1, 2, figsize=(20, 10))
-    # if isinstance(arch, str):
-    #     fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
-    # else:
-    #     fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
+#     fig, ax = plt.subplots(1, 2, figsize=(25, 12))
+#     # if isinstance(arch, str):
+#     #     fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+#     # else:
+#     #     fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
 
 
-#     # Activation plot
-#     tp = ax[0, 0].hist(act_count / num, bins=100)
-#     ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
-#     ax[0, 0].set_ylabel('neuron frequency')
-#     ax[0, 0].set_title('Single Neuron Activations')
-#     # fig.savefig(this_path + suffix + 'additive_activations.png')
-#     # plt.xlim(0, 1)
-#     # plt.close(fig)
+# #     # Activation plot
+# #     tp = ax[0, 0].hist(act_count / num, bins=100)
+# #     ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
+# #     ax[0, 0].set_ylabel('neuron frequency')
+# #     ax[0, 0].set_title('Single Neuron Activations')
+# #     # fig.savefig(this_path + suffix + 'additive_activations.png')
+# #     # plt.xlim(0, 1)
+# #     # plt.close(fig)
 
-#     # Eigenvalue plots:
+# #     # Eigenvalue plots:
+# #     # fig, ax = plt.subplots(figsize=(7, 7))
+# #     tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
+# #     ax[0, 1].set_ylabel('number of non-zero eigenvalues')
+# #     ax[0, 1].set_xlabel('layers')
+# #     ax[0, 1].set_title('Non-zero eigenvalues')
+# #     # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.png')
+# #     # plt.close(fig)
+
+
+# # # def plot_distances(net, distances, this_path, suffix=''):
 #     # fig, ax = plt.subplots(figsize=(7, 7))
-#     tp = ax[0, 1].bar(np.arange(len(eigen_count)), eigen_count)
-#     ax[0, 1].set_ylabel('number of non-zero eigenvalues')
-#     ax[0, 1].set_xlabel('layers')
-#     ax[0, 1].set_title('Non-zero eigenvalues')
-#     # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.png')
-#     # plt.close(fig)
+#     # X_axis = np.arange(len(distances))
+#     # dis_stat = np.array(distances)
+
+#     # ax[0, 0].bar(X_axis - 0.2, np.mean(distances, axis=1), 0.2, label = 'Mean')
+#     # # ax[1, 0].bar(X_axis + 0.0, np.var(distances, axis=1), 0.2, label = 'Var')
+#     # ax[0, 0].bar(X_axis + 0.0, np.max(distances, axis=1), 0.2, label = 'Max')
+#     # # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
+#     # ax[0, 0].set_ylabel('mean distances from origin')
+#     # ax[0, 0].set_xlabel('layers')
+#     # ax[0, 0].set_title('Max, Mean Norms throughout layers')
+#     # ax[0, 0].legend()
+
+#     stable_ranks_all = stable_ranks_all[1:-1]
 
 
-# # def plot_distances(net, distances, this_path, suffix=''):
-    # fig, ax = plt.subplots(figsize=(7, 7))
-    # X_axis = np.arange(len(distances))
-    # dis_stat = np.array(distances)
+#     tp = ax[0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
+#     ax[0].set_ylabel('Stable Rank', fontsize=45)
+#     ax[0].set_xlabel('layers', fontsize=45)
+#     ax[0].set_title('Stable Rank' , fontsize=45)
 
-    # ax[0, 0].bar(X_axis - 0.2, np.mean(distances, axis=1), 0.2, label = 'Mean')
-    # # ax[1, 0].bar(X_axis + 0.0, np.var(distances, axis=1), 0.2, label = 'Var')
-    # ax[0, 0].bar(X_axis + 0.0, np.max(distances, axis=1), 0.2, label = 'Max')
-    # # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
-    # ax[0, 0].set_ylabel('mean distances from origin')
-    # ax[0, 0].set_xlabel('layers')
-    # ax[0, 0].set_title('Max, Mean Norms throughout layers')
-    # ax[0, 0].legend()
+#     ax[0].tick_params(axis='y', labelsize=30)
 
-    stable_ranks_all = stable_ranks_all[1:-1]
+#     simple_spherical_mean_width_all = simple_spherical_mean_width_all[1: -1]
+
+#     tp = ax[1].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
+#     ax[1].set_ylabel('Mean Singular Values', fontsize=45)
+#     ax[1].set_xlabel('layers', fontsize=45)
+#     ax[1].set_title('Mean Singular Values', fontsize=45)
+
+#     ax[1].tick_params(axis='y', labelsize=30)
 
 
-    tp = ax[0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
-    ax[0].set_ylabel('Stable Rank', fontsize=30)
-    ax[0].set_xlabel('layers', fontsize=30)
-    ax[0].set_title('Stable Rank throughout layers' , fontsize=30)
+#     # tp = ax[1, 1].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
+#     # ax[1, 1].set_ylabel('Spherical Mean Width', fontsize=25)
+#     # ax[1, 1].set_xlabel('layers', fontsize=25)
+#     # ax[1, 1].set_title('Spherical Mean Width', fontsize=30)
 
-    simple_spherical_mean_width_all = simple_spherical_mean_width_all[1: -1]
+# #     tp = ax[3, 1].bar(np.arange(len(cell_dims)), cell_dims)
+# #     ax[3, 1].set_ylabel('dimensions')
+# #     ax[3, 1].set_xlabel('layers')
+# #     ax[3, 1].set_title('Cell Dimensions')
 
-    tp = ax[1].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
-    ax[1].set_ylabel('Mean Singular Values', fontsize=30)
-    ax[1].set_xlabel('layers', fontsize=30)
-    ax[1].set_title('Mean singular values', fontsize=30)
+#     fig.savefig(this_path + suffix + 'all_plots_dimensions.pdf')
+#     plt.close(fig)
 
-    # tp = ax[1, 1].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
-    # ax[1, 1].set_ylabel('Spherical Mean Width', fontsize=25)
-    # ax[1, 1].set_xlabel('layers', fontsize=25)
-    # ax[1, 1].set_title('Spherical Mean Width', fontsize=30)
+#     fig, ax = plt.subplots(1, 1, figsize=(20, 20))
+#     # if isinstance(arch, str):
+#     #     fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
+#     # else:
+#     #     fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
 
-#     tp = ax[3, 1].bar(np.arange(len(cell_dims)), cell_dims)
-#     ax[3, 1].set_ylabel('dimensions')
-#     ax[3, 1].set_xlabel('layers')
-#     ax[3, 1].set_title('Cell Dimensions')
+#     display_neuron_matrx[display_neuron_matrx > 0] = (np.array(display_neuron_matrx[display_neuron_matrx > 0]) / np.max(display_neuron_matrx[display_neuron_matrx > 0]) ) * 100
+    
+#     sns.set(font_scale=3)
+#     sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax, vmin=0, vmax=100)
+#     ax.set_title(f'Neuron activation heatmap',  fontsize=55)
 
-    fig.savefig(this_path + suffix + 'all_plots_dimensions.pdf')
-    plt.close(fig)
+#     cbar = ax.collections[0].colorbar
+#     cbar.set_ticks([0, 20, 40, 60, 80, 100])
+#     cbar.set_ticklabels(['0%', '20%', '40%', '60%', '80%', '100%'])
 
-    fig, ax = plt.subplots(1, 1, figsize=(20, 20))
+#     # Remove tick labels
+#     ax.set_xticklabels([])
+#     ax.set_yticklabels([])
+
+#     # Set axis labels
+#     ax.set_xlabel('Layer', fontsize=45)
+#     ax.set_ylabel('Neuron', fontsize=45)
+    
+#     fig.savefig(this_path + suffix + 'all_plots_heatmap.pdf')
+#     plt.close(fig)
+
+#     sns.reset_orig()
+
+
+############################################################################################################################################################################
+    fig, ax = plt.subplots(2, 2, figsize=(20, 20))
     # if isinstance(arch, str):
     #     fig.suptitle('Neuron activation Frequency{}, cell dim: {}'.format(arch, str(np.max(cell_dims))))
     # else:
     #     fig.suptitle('#neurons:{}, #layers:{}'.format(str(np.sum(arch)), str(len(arch)), str(np.max(cell_dims))))
 
-    display_neuron_matrx[display_neuron_matrx > 0] = (np.array(display_neuron_matrx[display_neuron_matrx > 0]) / np.max(display_neuron_matrx[display_neuron_matrx > 0]) ) * 100
-    
-    sns.set(font_scale=3)
-    sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax, vmin=0, vmax=100)
-    ax.set_title('Neuron activation heatmap')
 
-    # Remove tick labels
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
+    # Activation plot
+    # tp = ax[0, 0].hist(act_count / num, bins=100)
+    # ax[0, 0].set_xlabel('neuron activation percentage of a given dataset')
+    # ax[0, 0].set_ylabel('neuron frequency')
+    # ax[0, 0].set_title('Single Neuron Activations')
+    # fig.savefig(this_path + suffix + 'additive_activations.png')
+    # plt.xlim(0, 1)
+    # plt.close(fig)
 
-    # Set axis labels
-    ax.set_xlabel('Layer', fontsize=30)
-    ax.set_ylabel('Neuron', fontsize=30)
+    # Eigenvalue plots:
+    # fig, ax = plt.subplots(figsize=(7, 7))
+    tp = ax[0, 0].bar(np.arange(len(eigen_count)), eigen_count)
+    ax[0, 0].set_ylabel('number of non-zero eigenvalues', fontsize=24)
+    ax[0, 0].set_xlabel('layers', fontsize=24)
+    ax[0, 0].set_title('# Non-zero eigenvalues', fontsize=24)
+    # fig.savefig(this_path + suffix + 'non_zero_eigenvalues.png')
+    # plt.close(fig)
+
+
+# def plot_distances(net, distances, this_path, suffix=''):
+    # fig, ax = plt.subplots(figsize=(7, 7))
+    X_axis = np.arange(len(distances))
+    dis_stat = np.array(distances)
+
+    ax[0, 1].bar(X_axis - 0.2, np.mean(distances, axis=1), 0.2, label = 'Mean')
+    # ax[1, 0].bar(X_axis + 0.0, np.var(distances, axis=1), 0.2, label = 'Var')
+    ax[0, 1].bar(X_axis + 0.0, np.max(distances, axis=1), 0.2, label = 'Max')
+    # plt.bar(X_axis + 0.2, dis_stat[:, 1] / dis_stat[:, 0], 0.2, label = 'Max / mean')
+    ax[0, 1].set_ylabel('mean distances from origin', fontsize=24)
+    ax[0, 1].set_xlabel('layers', fontsize=24)
+    ax[0, 1].set_title('Max, Mean Norms throughout layers', fontsize=24)
+    ax[0, 1].legend()
+
+    # display_neuron_matrx = (np.array(display_neuron_matrx) / np.max(display_neuron_matrx) ) * 100
+    # print(display_neuron_matrx)
     
-    fig.savefig(this_path + suffix + 'all_plots_heatmap.pdf')
+    # sns.heatmap(display_neuron_matrx, cmap="mako", annot=False, ax=ax[1, 1], vmin=0, vmax=100)
+    # ax[1, 1].set_title('Neuron activation heatmap')
+
+    tp = ax[1, 0].bar(np.arange(len(stable_ranks_all)), stable_ranks_all)
+    ax[1, 0].set_ylabel('Stable Rank', fontsize=24)
+    ax[1, 0].set_xlabel('layers', fontsize=24)
+    ax[1, 0].set_title('Stable Rank throughout layers', fontsize=24)
+
+    tp = ax[1, 1].bar(np.arange(len(spherical_mean_width_v2_all)), spherical_mean_width_v2_all)
+    ax[1, 1].set_ylabel('Spherical Mean Width', fontsize=24)
+    ax[1, 1].set_xlabel('layers', fontsize=24)
+    ax[1, 1].set_title('Spherical Mean Width', fontsize=24)
+
+
+    # tp = ax[2, 0].bar(np.arange(len(simple_spherical_mean_width_all)), simple_spherical_mean_width_all)
+    # ax[2, 0].set_ylabel('Spherical Mean Width')
+    # ax[2, 0].set_xlabel('layers')
+    # ax[2, 0].set_title('2 * Mean singular values')
+
+
+
+    # tp = ax[3, 1].bar(np.arange(len(cell_dims)), cell_dims)
+    # ax[3, 1].set_ylabel('dimensions')
+    # ax[3, 1].set_xlabel('layers')
+    # ax[3, 1].set_title('Cell Dimensions')
+
+    fig.savefig(this_path + suffix + 'all_plots.pdf')
     plt.close(fig)
-
-    sns.reset_orig()
-
-
 ############################################################################################################################################################################
 #     fig, ax = plt.subplots(4, 2, figsize=(20, 20))
 #     if isinstance(arch, str):
